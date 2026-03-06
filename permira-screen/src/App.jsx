@@ -707,6 +707,8 @@ export default function App(){
     if(sortBy==="IRR ↓")return [...f].sort((a,b)=>b.lbo.irr-a.lbo.irr);
     if(sortBy==="DCF % ↓")return [...f].sort((a,b)=>(b.sharePct??-9999)-(a.sharePct??-9999));
     if(sortBy==="TEV ↓")return [...f].sort((a,b)=>b.tev-a.tev);
+    if(sortBy==="EV/EBITDA ↓")return [...f].sort((a,b)=>b.ntmEBITDAX-a.ntmEBITDAX);
+    if(sortBy==="EV/EBITDA ↑")return [...f].sort((a,b)=>a.ntmEBITDAX-b.ntmEBITDAX);
     return f;
   })();
   const dimCfg=[["val","Valuation","/3.0"],["qual","Biz Quality","/3.0"],["ai","AI Risk","/3.0"],["lbo","LBO","/3.0"],["dcf","DCF","/2.0"],["pe","PE Fit","/1.0"]];
@@ -939,7 +941,7 @@ export default function App(){
                   <PillRow label="Show" opts={["All","Top Picks","Avoid"]} val={avoidFilter} set={setAvoidFilter}/>
                   <PillRow label="AI Risk" opts={["All","Low","Medium","High"]} val={aiRiskFilter} set={setAiRiskFilter}/>
                   <PillRow label="SoR" opts={["All","SoR Only"]} val={sorFilter} set={setSorFilter}/>
-                  <PillRow label="Sort" opts={["Score","IRR ↓","DCF % ↓","TEV ↓"]} val={sortBy} set={setSortBy}/>
+                  <PillRow label="Sort" opts={["Score","IRR ↓","DCF % ↓","TEV ↓","EV/EBITDA ↓","EV/EBITDA ↑"]} val={sortBy} set={setSortBy}/>
                 </div>
                 <div className="flex items-center justify-between pt-0.5">
                   <span className="text-xs text-gray-400">{filtered.length} of {companies.length} companies</span>
