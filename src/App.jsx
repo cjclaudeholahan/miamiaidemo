@@ -1,20 +1,23 @@
 import { useState } from "react";
-const DEFAULT_WACC=10,DEFAULT_PGR=5,DCF_YEARS=10,LBO_HOLD=5,LBO_LEV=7,LBO_INT_RATE=0.09,LBO_PREM=1.30,LBO_MAX_EXIT=20,TAX_RATE=0.22;
+const DEFAULT_WACC=10,DEFAULT_PGR=5,DCF_YEARS=10,LBO_HOLD=5,LBO_HOLD_YRS=4.5,LBO_LEV=7,LBO_INT_RATE=0.08,LBO_PREM=1.30,LBO_MAX_EXIT=20,TAX_RATE=0.25;
 const IRR_GREAT=25,IRR_GOOD=20,IRR_OK=15;
 function growthAtYear(base,yr){
   const g=base/100,f=0.10;
   if(g<=f)return g;
   return g+(f-g)*((yr-1)/(DCF_YEARS-1));
 }
-function runDCF(companyName,growthPct,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
+function runDCF(companyName,cagrPct,g2027Rate,baseCAGR,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
   const fin=COMPANY_FINANCIALS[companyName];
   const endM=endMarginPct/100,wD=wacc/100,pD=pgr/100;
   let rows=[],pvSum=0;
-  // Year 2 ratios for projections
+  // Ratios from 2027 consensus for SBC/D&A; Other CF held as UFCF pre-tax conversion % of EBITDA
   const y2SbcPct=fin?(fin.sbc27/fin.rev27):0;
   const y2DaPct=fin?(fin.da27/fin.rev27):0;
-  const y2OtherPct=fin?(fin.other27/fin.rev27):0;
+  const y2OtherConv=fin?(fin.other27/fin.ebitda27):0; // UFCF(pre-tax) conversion: Other CF = EBITDA × this ratio
   const y2Margin=fin?(fin.ebitda27/fin.rev27):(ebitdaPct/100);
+  // 2026-2027 = consensus (locked). 2028+ = linear convergence from 2027 growth to 10% over yr 3-10, shifted by CAGR delta.
+  const delta=(cagrPct-baseCAGR)/100;
+  const dcfGrowth=(yr)=>g2027Rate+(0.10-g2027Rate)*((yr-3)/7)+delta;
   let prevRev=fin?fin.rev27:ntmRev;
   for(let yr=1;yr<=DCF_YEARS;yr++){
     const label=String(2025+yr);
@@ -24,16 +27,16 @@ function runDCF(companyName,growthPct,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
     }else if(yr===2&&fin){
       rev=fin.rev27;ebitda=fin.ebitda27;sbc=fin.sbc27;da=fin.da27;otherCF=fin.other27;
     }else{
-      const g=growthAtYear(growthPct,yr);
+      const g=dcfGrowth(yr);
       rev=prevRev*(1+g);
       const margin=y2Margin+(endM-y2Margin)*((yr-2)/(DCF_YEARS-2));
       ebitda=rev*margin;
       sbc=rev*y2SbcPct;
       da=rev*y2DaPct;
-      otherCF=rev*y2OtherPct;
+      otherCF=ebitda*y2OtherConv;
     }
     if(yr>=3)prevRev=rev;
-    const revGrowth=yr===1?0:(yr===2&&fin?((fin.rev27/fin.rev26-1)*100):growthAtYear(growthPct,yr)*100);
+    const revGrowth=yr===1&&fin&&fin.rev25?((fin.rev26/fin.rev25-1)*100):(yr===1?0:(yr===2&&fin?((fin.rev27/fin.rev26-1)*100):dcfGrowth(yr)*100));
     const ebitdaMargin=(ebitda/rev)*100;
     const sbcPctRev=(sbc/rev)*100;
     const ebitdaPostSBC=ebitda-sbc;
@@ -56,38 +59,80 @@ function runDCF(companyName,growthPct,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
       da:Math.round(da),daPctRev:Math.round(daPctRev*10)/10,
       ebit:Math.round(ebit),ebitMargin:Math.round((ebit/rev)*1000)/10,taxes:Math.round(taxes),taxRate:25,
       nopat:Math.round(nopat),nopatMargin:Math.round(nopatMargin*10)/10,
-      otherCF:Math.round(otherCF),otherCFPctRev:Math.round(otherCFPctRev*10)/10,
+      otherCF:Math.round(otherCF),otherCFPctRev:Math.round(otherCFPctRev*10)/10,ufcfPretaxConv:Math.round(((ebitda+otherCF)/ebitda)*1000)/10,
       ufcf:Math.round(ufcf),ufcfStub:Math.round(ufcfForPV),stubbed:yr===1,ufcfMargin:Math.round((ufcf/rev)*1000)/10,ufcfConv:Math.round((ufcf/ebitdaPostSBC)*1000)/10,pv:Math.round(pv)});
   }
+  // Build 2025A historical row (not included in DCF calc)
+  let hist=null;
+  if(fin&&fin.rev25){
+    const h={yr:0,label:"2025A",rev:Math.round(fin.rev25),revGrowth:fin.rev24?Math.round((fin.rev25/fin.rev24-1)*1000)/10:0,ebitda:Math.round(fin.ebitda25),ebitdaMargin:Math.round((fin.ebitda25/fin.rev25)*1000)/10,sbc:Math.round(fin.sbc25),sbcPctRev:Math.round((fin.sbc25/fin.rev25)*1000)/10};
+    const hPostSBC=fin.ebitda25-fin.sbc25;
+    h.ebitdaPostSBC=Math.round(hPostSBC);h.ebitdaPostSBCMargin=Math.round((hPostSBC/fin.rev25)*1000)/10;
+    h.da=Math.round(fin.da25);h.daPctRev=Math.round((fin.da25/fin.rev25)*1000)/10;
+    const hEbit=hPostSBC-fin.da25;h.ebit=Math.round(hEbit);h.ebitMargin=Math.round((hEbit/fin.rev25)*1000)/10;
+    const hTax=Math.max(hEbit*0.25,0);h.taxes=Math.round(hTax);h.taxRate=25;
+    const hNopat=hEbit-hTax;h.nopat=Math.round(hNopat);h.nopatMargin=Math.round((hNopat/fin.rev25)*1000)/10;
+    h.otherCF=Math.round(fin.other25);h.otherCFPctRev=Math.round((fin.other25/fin.rev25)*1000)/10;h.ufcfPretaxConv=Math.round(((fin.ebitda25+fin.other25)/fin.ebitda25)*1000)/10;
+    const hUfcf=hNopat+fin.da25+fin.other25;h.ufcf=Math.round(hUfcf);h.ufcfStub=Math.round(hUfcf);h.stubbed=false;
+    h.ufcfMargin=Math.round((hUfcf/fin.rev25)*1000)/10;h.ufcfConv=Math.round((hUfcf/hPostSBC)*1000)/10;
+    h.pv=null;hist=h;
+  }
   const last=rows[DCF_YEARS-1],tvUFCF=last.ufcf*(1+pD),tv=tvUFCF/(wD-pD),pvTV=tv/Math.pow(1+wD,DCF_YEARS-0.5);
-  return{rows,pvSum:Math.round(pvSum),tv:Math.round(tv),pvTV:Math.round(pvTV),intrinsic:Math.round(pvSum+pvTV),lastUFCF:last.ufcf,tvUFCF:Math.round(tvUFCF),wacc:wD,pgr:pD};
+  return{rows,hist,pvSum:Math.round(pvSum),tv:Math.round(tv),pvTV:Math.round(pvTV),intrinsic:Math.round(pvSum+pvTV),lastUFCF:last.ufcf,tvUFCF:Math.round(tvUFCF),wacc:wD,pgr:pD};
 }
-function runLBO(ntmRev,ntmRevX,ebitdaPct,growthPct,endMarginPct,exitMultOverride,entryTEVOverride,ltmEBITDAOv){
+function runLBO(ntmRev,ntmRevX,ebitdaPct,growthPct,endMarginPct,exitMultOverride,entryTEVOverride,ltmEBITDAOv,otherConv,companyName,g2027Rate,baseCAGR){
   const startM=ebitdaPct/100,endM=endMarginPct/100;
-  const entryEBITDA=ntmRev*startM;
-  const levEBITDA=ltmEBITDAOv??entryEBITDA; // LTM for debt sizing; NTM for entry multiple & projections
+  const conv=otherConv||0;
+  const fin=COMPANY_FINANCIALS[companyName];
+  const y2Margin=fin?(fin.ebitda27/fin.rev27):startM;
+  const delta=(growthPct-baseCAGR)/100;
+  const dcfGrowth=(yr)=>g2027Rate+(0.10-g2027Rate)*((yr-3)/7)+delta;
+  const entryEBITDA=fin&&fin.ebitda26&&fin.ebitda27?(fin.ebitda26*0.5+fin.ebitda27*0.5):(ntmRev*startM);
+  const levEBITDA=fin&&fin.ebitda25&&fin.ebitda26?(fin.ebitda25*0.5+fin.ebitda26*0.5):(ltmEBITDAOv??entryEBITDA);
   const entryTEV=entryTEVOverride??(ntmRev*ntmRevX*LBO_PREM);
   const entryEBITDAMult=entryTEV/entryEBITDA;
   const grossDebt=Math.min(levEBITDA*LBO_LEV,entryTEV*0.75);
-  const equityIn=Math.max(entryTEV-grossDebt,1);
-  let rev=ntmRev,cumCash=0,lboRows=[];
-  for(let yr=1;yr<=LBO_HOLD;yr++){
-    const g=growthAtYear(growthPct,yr);
-    rev=yr===1?ntmRev:rev*(1+g);
-    const margin=yr===1?startM:startM+(endM-startM)*((yr-1)/(DCF_YEARS-1));
-    const ebitda=rev*margin,ufcf=ebitda*0.85,interest=grossDebt*LBO_INT_RATE;
-    const ebt=Math.max(ufcf-interest,0),tax=ebt*TAX_RATE,lfcf=ufcf-interest-tax;
-    cumCash+=Math.max(lfcf,0);
-    lboRows.push({yr,rev:Math.round(rev),margin:Math.round(margin*1000)/10,ebitda:Math.round(ebitda),ufcf:Math.round(ufcf),interest:Math.round(interest),tax:Math.round(tax),lfcf:Math.round(lfcf),cumCash:Math.round(cumCash)});
+  const rev2026=fin&&fin.rev26?fin.rev26:ntmRev;
+  const cashToBS=Math.round(rev2026*0.10);
+  const financingFees=Math.round(grossDebt*0.03);
+  const txnFees=Math.round(entryTEV*0.0175);
+  const totalUses=entryTEV+cashToBS+financingFees+txnFees;
+  const equityIn=Math.max(totalUses-grossDebt,1);
+  let rev=ntmRev,prevRev=fin?fin.rev25:ntmRev,cashBal=cashToBS,lboRows=[];
+  // 2025A historical row
+  let hist=null;
+  if(fin&&fin.rev25){
+    const hEbitda=fin.ebitda25,hOther=fin.other25,hUfcfPretax=hEbitda+hOther;
+    hist={yr:0,label:"2025A",rev:Math.round(fin.rev25),revGrowth:fin.rev24?Math.round((fin.rev25/fin.rev24-1)*1000)/10:0,margin:Math.round((hEbitda/fin.rev25)*1000)/10,ebitda:Math.round(hEbitda),otherCF:Math.round(hOther),ufcfPretax:Math.round(hUfcfPretax),ufcfPretaxConv:Math.round((hUfcfPretax/hEbitda)*1000)/10,isHist:true};
   }
-  // Yr 6 = NTM at exit — exit multiple applied to forward EBITDA per NTM convention; hold is still 5 yrs for IRR
-  const g6=growthAtYear(growthPct,6),yr6Rev=rev*(1+g6),yr6Margin=startM+(endM-startM)*(5/(DCF_YEARS-1)),yr6EBITDA=yr6Rev*yr6Margin;
-  lboRows.push({yr:6,rev:Math.round(yr6Rev),margin:Math.round(yr6Margin*1000)/10,ebitda:Math.round(yr6EBITDA),isNTM:true});
+  let lboPrevRev=fin?fin.rev27:ntmRev;
+  for(let yr=1;yr<=LBO_HOLD;yr++){
+    const g=dcfGrowth(yr);
+    if(yr===1&&fin){rev=fin.rev26;}else if(yr===2&&fin){rev=fin.rev27;}else{rev=lboPrevRev*(1+g);}
+    if(yr>=3)lboPrevRev=rev;
+    const revGrowth=yr===1&&fin&&fin.rev25?Math.round((rev/fin.rev25-1)*1000)/10:(yr===1?0:yr===2&&fin?Math.round(((fin.rev27/fin.rev26)-1)*1000)/10:Math.round(g*1000)/10);
+    const margin=yr===1&&fin?(fin.ebitda26/fin.rev26):yr===2&&fin?(fin.ebitda27/fin.rev27):y2Margin+(endM-y2Margin)*((yr-2)/(DCF_YEARS-2));
+    const ebitda=rev*margin,otherCF=ebitda*conv,ufcfPretax=ebitda+otherCF,interest=grossDebt*LBO_INT_RATE;
+    const stub=yr===1?0.5:1; // 2026 stub: entry 6/30, only H2 cash flows
+    const cashUfcf=ufcfPretax*stub,cashInterest=interest*stub;
+    const tax=cashUfcf*TAX_RATE;
+    const bopCash=cashBal;
+    const eopCash=bopCash+cashUfcf-tax-cashInterest;
+    cashBal=eopCash;
+    lboRows.push({yr,label:String(2025+yr)+(yr===1?" ⁵":""),rev:Math.round(rev),revGrowth,margin:Math.round(margin*1000)/10,ebitda:Math.round(ebitda),otherCF:Math.round(otherCF),ufcfPretax:Math.round(ufcfPretax),ufcfPretaxConv:Math.round(((ebitda+otherCF)/ebitda)*1000)/10,interest:Math.round(cashInterest),tax:Math.round(tax),cashUfcf:Math.round(cashUfcf),bopCash:Math.round(bopCash),eopCash:Math.round(eopCash)});
+    prevRev=rev;
+  }
+  // Yr 6 = NTM at exit
+  const g6=dcfGrowth(6),yr6Rev=lboPrevRev*(1+g6),yr6Margin=y2Margin+(endM-y2Margin)*((6-2)/(DCF_YEARS-2)),yr6EBITDA=yr6Rev*yr6Margin;
+  lboRows.push({yr:6,label:"2031E (NTM)",rev:Math.round(yr6Rev),revGrowth:Math.round(g6*1000)/10,margin:Math.round(yr6Margin*1000)/10,ebitda:Math.round(yr6EBITDA),isNTM:true});
   const exitEBITDA=Math.round(yr6EBITDA);
   const exitEBITDAMult=Math.min(exitMultOverride??Math.min(entryEBITDAMult,LBO_MAX_EXIT),LBO_MAX_EXIT);
-  const exitTEV=exitEBITDA*exitEBITDAMult,exitEquity=Math.max(exitTEV-grossDebt+cumCash,0);
-  const moic=exitEquity/equityIn,irr=(Math.pow(Math.max(moic,0),1/LBO_HOLD)-1)*100;
-  return{entryTEV:Math.round(entryTEV),entryEBITDA:Math.round(entryEBITDA),levEBITDA:Math.round(levEBITDA),entryEBITDAMult:Math.round(entryEBITDAMult*10)/10,grossDebt:Math.round(grossDebt),equityIn:Math.round(equityIn),exitTEV:Math.round(exitTEV),exitEBITDA,exitEBITDAMult:Math.round(exitEBITDAMult*10)/10,cumCash:Math.round(cumCash),exitEquity:Math.round(exitEquity),moic:Math.round(moic*10)/10,irr:Math.round(irr*10)/10,lboRows};
+  const exitTEV=exitEBITDA*exitEBITDAMult;
+  const grossExitEquity=Math.max(exitTEV-grossDebt+cashBal,0);
+  const optionsDilution=Math.max(Math.round((grossExitEquity-equityIn)*0.10),0);
+  const exitEquity=Math.max(grossExitEquity-optionsDilution,0);
+  const moic=exitEquity/equityIn,irr=(Math.pow(Math.max(moic,0),1/LBO_HOLD_YRS)-1)*100;
+  return{entryTEV:Math.round(entryTEV),entryEBITDA:Math.round(entryEBITDA),levEBITDA:Math.round(levEBITDA),entryEBITDAMult:Math.round(entryEBITDAMult*10)/10,grossDebt:Math.round(grossDebt),equityIn:Math.round(equityIn),exitTEV:Math.round(exitTEV),exitEBITDA,exitEBITDAMult:Math.round(exitEBITDAMult*10)/10,eopCashFinal:Math.round(cashBal),grossExitEquity:Math.round(grossExitEquity),optionsDilution,exitEquity:Math.round(exitEquity),moic:Math.round(moic*10)/10,irr:Math.round(irr*10)/10,cashToBS,financingFees,txnFees,totalUses:Math.round(totalUses),lboRows,hist};
 }
 function scoreCompany(co,dcf,lbo){
   const evE=co.tev/(co.ntmRev*co.ebitda/100),evR=co.ntmRevX;
@@ -357,22 +402,23 @@ const LTM_EBITDA={
   "Flywire":131
 }
 const COMPANY_FINANCIALS={
-  "Veeva Systems":{rev26:3561,rev27:3997,ebitda26:1603,ebitda27:1829,sbc26:527,sbc27:Math.round((527/3561)*3997),da26:26,da27:46,other26:-32,other27:-35},
-  "Bentley Systems":{rev26:1700,rev27:1875,ebitda26:610,ebitda27:693,sbc26:82,sbc27:Math.round((82/1700)*1875),da26:29,da27:29,other26:51,other27:60},
-  "Nemetschek":{rev26:1550,rev27:1768,ebitda26:504,ebitda27:588,sbc26:0,sbc27:0,da26:41,da27:38,other26:53,other27:59},
-  "Waystar":{rev26:1286,rev27:1415,ebitda26:537,ebitda27:594,sbc26:49,sbc27:Math.round((49/1286)*1415),da26:26,da27:28,other26:-83,other27:-87},
-  "AppFolio":{rev26:1113,rev27:1302,ebitda26:319,ebitda27:394,sbc26:83,sbc27:Math.round((83/1113)*1302),da26:22,da27:36,other26:-24,other27:-28},
-  "CCC Intelligent Solutions":{rev26:1153,rev27:1257,ebitda26:481,ebitda27:531,sbc26:191,sbc27:Math.round((191/1153)*1257),da26:62,da27:74,other26:-93,other27:-99},
-  "Elastic":{rev26:1891,rev27:2153,ebitda26:333,ebitda27:411,sbc26:323,sbc27:Math.round((323/1891)*2153),da26:11,da27:23,other26:-44,other27:-49},
-  "Cellebrite":{rev26:569,rev27:661,ebitda26:152,ebitda27:185,sbc26:54,sbc27:Math.round((54/569)*661),da26:7,da27:10,other26:35,other27:42},
-  "nCino":{rev26:637,rev27:693,ebitda26:159,ebitda27:197,sbc26:79,sbc27:Math.round((79/637)*693),da26:6,da27:9,other26:-12,other27:-13},
-  "Flywire":{rev26:720,rev27:829,ebitda26:162,ebitda27:201,sbc26:83,sbc27:Math.round((83/720)*829),da26:26,da27:31,other26:3,other27:4}
+  "Veeva Systems":{rev24:2715,rev25:3158,ebitda25:1434,sbc25:470,da25:24,other25:-62,rev26:3561,rev27:3997,ebitda26:1603,ebitda27:1829,sbc26:527,sbc27:Math.round((527/3561)*3997),da26:26,da27:46,other26:-32,other27:-35},
+  "Bentley Systems":{rev24:1353,rev25:1502,ebitda25:526,sbc25:73,da25:24,other25:78,rev26:1700,rev27:1875,ebitda26:610,ebitda27:693,sbc26:82,sbc27:Math.round((82/1700)*1875),da26:29,da27:29,other26:51,other27:60},
+  "Nemetschek":{rev24:1147,rev25:1373,ebitda25:428,sbc25:0,da25:35,other25:52,rev26:1550,rev27:1768,ebitda26:504,ebitda27:588,sbc26:0,sbc27:0,da26:41,da27:38,other26:53,other27:59},
+  "Waystar":{rev24:944,rev25:1099,ebitda25:462,sbc25:42,da25:22,other25:-65,rev26:1286,rev27:1415,ebitda26:537,ebitda27:594,sbc26:49,sbc27:Math.round((49/1286)*1415),da26:26,da27:28,other26:-83,other27:-87},
+  "AppFolio":{rev24:794,rev25:951,ebitda25:246,sbc25:71,da25:11,other25:-27,rev26:1113,rev27:1302,ebitda26:319,ebitda27:394,sbc26:83,sbc27:Math.round((83/1113)*1302),da26:22,da27:36,other26:-24,other27:-28},
+  "CCC Intelligent Solutions":{rev24:945,rev25:1057,ebitda25:436,sbc25:175,da25:59,other25:-104,rev26:1153,rev27:1257,ebitda26:481,ebitda27:531,sbc26:191,sbc27:Math.round((191/1153)*1257),da26:62,da27:74,other26:-93,other27:-99},
+  "Elastic":{rev24:1391,rev25:1651,ebitda25:276,sbc25:284,da25:12,other25:-38,rev26:1891,rev27:2153,ebitda26:333,ebitda27:411,sbc26:323,sbc27:Math.round((323/1891)*2153),da26:11,da27:23,other26:-44,other27:-49},
+  "Cellebrite":{rev24:401,rev25:476,ebitda25:128,sbc25:45,da25:7,other25:34,rev26:569,rev27:661,ebitda26:152,ebitda27:185,sbc26:54,sbc27:Math.round((54/569)*661),da26:7,da27:10,other26:35,other27:42},
+  "nCino":{rev24:535,rev25:589,ebitda25:131,sbc25:73,da25:6,other25:-16,rev26:637,rev27:693,ebitda26:159,ebitda27:197,sbc26:79,sbc27:Math.round((79/637)*693),da26:6,da27:9,other26:-12,other27:-13},
+  "Flywire":{rev24:492,rev25:603,ebitda25:121,sbc25:72,da25:17,other25:-9,rev26:720,rev27:829,ebitda26:162,ebitda27:201,sbc26:83,sbc27:Math.round((83/720)*829),da26:26,da27:31,other26:3,other27:4}
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt  = n=>Math.abs(n)>=1000?`$${(n/1000).toFixed(1)}B`:`$${Math.round(Math.abs(n))}M`;
 const fmtN = n=>Math.abs(n)>=1000?`${(n/1000).toFixed(1)}B`:`${Math.round(Math.abs(n))}M`;
 const fmtM = n=>n<0?`(${Math.round(Math.abs(n)).toLocaleString()})`:`${Math.round(n).toLocaleString()}`;
+const fmtPct = n=>n<0?`(${Math.abs(n)}%)`:`${n}%`;
 const riskColor=r=>({"Low":"bg-green-100 text-green-800","Medium":"bg-yellow-100 text-yellow-800","High":"bg-red-100 text-red-800"})[r]||"bg-gray-100";
 const irrColor=v=>v>=IRR_GREAT?"text-green-700 font-bold":v>=IRR_GOOD?"text-lime-700 font-bold":v>=IRR_OK?"text-yellow-600":"text-red-500";
 const irrLabel=v=>v>=IRR_GREAT?"★ Great":v>=IRR_GOOD?"✓ Good":v>=IRR_OK?"~ OK":"✗ Weak";
@@ -425,17 +471,26 @@ export default function App(){
   const companies=RAW.map(co=>{
     const ov=getOv(co.name);
     const defEndM=Math.max(co.ebitda,Math.min(co.ebitda+10,40));
-    const g=ov.growth??co.growth;
+    const fin=COMPANY_FINANCIALS[co.name];
+    // Compute 2027 consensus growth rate and default CAGR from convergence model (2027 growth → 10% over 2028-2035)
+    const oldStartG=fin&&fin.rev25?Math.round((fin.rev26/fin.rev25-1)*1000)/10:co.growth;
+    const g2027Rate=fin?(fin.rev27/fin.rev26-1):(oldStartG/100);
+    let simRev=fin?fin.rev27:(co.ntmRev*(1+g2027Rate));
+    for(let yr=3;yr<=DCF_YEARS;yr++){simRev*=(1+(g2027Rate+(0.10-g2027Rate)*((yr-3)/7)));}
+    const rev2026=fin?fin.rev26:co.ntmRev;
+    const defCAGR=Math.round((Math.pow(simRev/rev2026,1/(DCF_YEARS-1))-1)*1000)/10;
+    const g=ov.growth??defCAGR;
     const eM=ov.endMargin??defEndM;
     const xM=ov.exitMult??null;
     const entryTEV=lboEntryTEV(co.sd,co.ntmRev,co.ntmRevX);
-    const dcf=runDCF(co.name,g,co.ebitda,eM,gWacc,gPgr,co.ntmRev);
-    const lbo=runLBO(co.ntmRev,co.ntmRevX,co.ebitda,g,eM,xM,entryTEV,LTM_EBITDA[co.name]??null);
+    const otherConv=fin?(fin.other27/fin.ebitda27):0;
+    const dcf=runDCF(co.name,g,g2027Rate,defCAGR,co.ebitda,eM,gWacc,gPgr,co.ntmRev);
+    const lbo=runLBO(co.ntmRev,co.ntmRevX,co.ebitda,g,eM,xM,entryTEV,LTM_EBITDA[co.name]??null,otherConv,co.name,g2027Rate,defCAGR);
     const sc=scoreCompany(co,dcf,lbo);
     const ntmEBITDAX=Math.round((co.tev/(co.ntmRev*co.ebitda/100))*10)/10;
     const dcfShare=dcfPerShare(dcf.intrinsic,co.sd);
     const sharePct=co.sd&&dcfShare?Math.round((dcfShare/co.sd.sharePrice-1)*100):null;
-    return{...co,dcf,lbo,ntmEBITDAX,...sc,_dcf:dcf,_lbo:lbo,dcfShare,sharePct,
+    return{...co,defCAGR,oldStartG,g2027Rate,dcf,lbo,ntmEBITDAX,...sc,_dcf:dcf,_lbo:lbo,dcfShare,sharePct,
       _scores:{...sc,_dcf:dcf,_lbo:lbo,_dcfShare:dcfShare,evEbitda:ntmEBITDAX,evRev:co.ntmRevX}};
   }).sort((a,b)=>b.total-a.total);
   const filtered=(()=>{
@@ -456,8 +511,9 @@ export default function App(){
   })();
   const dimCfg=[["val","Valuation","/3.0"],["qual","Biz Quality","/3.0"],["ai","AI Risk","/3.0"],["lbo","LBO","/3.0"],["dcf","DCF","/2.0"],["pe","PE Fit","/1.0"]];
   if(!authed)return(
-    <div className="bg-gray-50 min-h-screen font-sans text-sm flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-80">
+    <div className="min-h-screen font-sans text-sm flex items-center justify-center bg-cover bg-center bg-no-repeat relative" style={{backgroundImage:"url('/miami-bg.avif')"}}>
+      <img src="/permira-logo.png" alt="Permira" className="absolute top-10 left-10 h-16"/>
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-8 w-80">
         <h1 className="text-xl font-bold text-gray-900 mb-1">Miami Offsite Demo — Take-Private Screen</h1>
         <p className="text-xs text-gray-500 mb-6">Permira · Enter password to continue</p>
         <form onSubmit={e=>{e.preventDefault();if(pw==="miami")setAuthed(true);else{setPw("");alert("Incorrect password");}}} className="space-y-4">
@@ -476,7 +532,7 @@ export default function App(){
       </div>
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-gray-200">
-        {[["screen","📊 Screen"],["methodology","📐 Methodology"],["assumptions","⚙️ Assumptions"],["top5","🏆 Top 5"]].map(([k,l])=>(
+        {[["screen","📊 Screen"],["methodology","📐 Methodology"],["assumptions","⚙️ Assumptions"]].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)} className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${tab===k?"border-gray-900 text-gray-900":"border-transparent text-gray-500 hover:text-gray-700"}`}>{l}</button>
         ))}
       </div>
@@ -499,7 +555,7 @@ export default function App(){
             </div>
             <div className="bg-white rounded-lg border border-orange-100 p-4 text-xs space-y-1.5">
               <p className="font-bold text-orange-900 mb-2">💰 LBO Assumptions</p>
-              {[["Entry price","Share price × 1.30 × shares out + net debt"],["Entry EV/EBITDA","Derived: Entry TEV ÷ NTM EBITDA"],["Leverage","7.0× NTM EBITDA, capped at 75% TEV"],["Interest","9.0% on gross debt (fixed — no paydown)"],["Debt","Fixed throughout hold"],["LFCF","(EBITDA×85%) − Interest − Tax(22% on EBT)"],["Cash","LFCF accumulates on balance sheet"],["Hold","5 years"],["Revenue/margins","Same as DCF Yrs 1–5; Yr 6 projected for NTM exit EBITDA"],["Exit multiple","Applied to NTM EBITDA (Yr 6); defaults to entry EV/EBITDA, hard cap 20×"],["Exit equity","Exit TEV − Gross Debt + Accumulated Cash"],["IRR","≥25% Great | ≥20% Good | ≥15% OK | <15% Weak"]].map(([k,v])=>(
+              {[["Entry price","Share price × 1.30 × shares out + net debt"],["Entry EV/EBITDA","Derived: Entry TEV ÷ NTM EBITDA"],["Leverage","7.0× LTM EBITDA (as of 6/30/2026), capped at 75% TEV"],["Interest","9.0% on gross debt (fixed — no paydown)"],["Debt","Fixed throughout hold"],["Cash to BS","10% of 2026 revenue"],["Fees","Financing 3% of debt + Transaction 1.75% of EV"],["Cash Balance","BoP Cash + UFCF (Pre-Tax) − Taxes (22% on EBT) − Net Interest Expense"],["Options","10% of equity gains at exit"],["Hold","4.5 years (entry 6/30/2026, exit 12/31/2030)"],["Revenue/margins","Same as DCF Yrs 1–5; Yr 6 projected for NTM exit EBITDA"],["Exit multiple","Applied to NTM EBITDA (Yr 6); defaults to entry EV/EBITDA, hard cap 20×"],["Exit equity","Exit TEV − Gross Debt + Accumulated Cash"],["IRR","≥25% Great | ≥20% Good | ≥15% OK | <15% Weak"]].map(([k,v])=>(
                 <div key={k} className="flex gap-2 pb-1 border-b border-gray-100"><span className="text-gray-400 w-36 flex-shrink-0">{k}</span><span className="font-medium text-gray-800">{v}</span></div>
               ))}
             </div>
@@ -521,7 +577,7 @@ export default function App(){
           {[["Valuation (3pts)","EV/EBITDA primary (max 2pts): <10x ≈ maximum; >20x ≈ near zero. EV/Revenue secondary (max 1pt): <3x maximum; >12x minimum.","bg-blue-50 border-blue-200"],
             ["Business Quality (3pts)","Market Positioning: SoR=1.0, non-SoR=0.35 (max 1.0pt). Revenue Moat: usage-based+0.35/seat-based+0.10, non-seat-locked+0.20 (max 0.55pt). Pricing Power: EBITDA margin proxy, capped at 50% (max 0.75pt). Market Leadership: N3Y CAGR capped at 25% (max 0.40pt). Investment Grade: PE Fit signal (max 0.30pt).","bg-purple-50 border-purple-200"],
             ["AI Risk (3pts)","Base: Low=2.6, Medium=1.4, High=0.1. Bonuses: SoR +0.2, Usage-Based +0.2, Seat-Based −0.2, PE-Owned +0.2.","bg-red-50 border-red-200"],
-            ["LBO Returns (3pts)","≥25% = 3.0 | ≥20% = 2.2 | ≥15% = 1.4 | <15% = scaled to 0. Entry at 30% premium to share price, 7× leverage at 9% fixed, 5-year hold, exit multiple applied to NTM (Yr 6) EBITDA capped 20×.","bg-orange-50 border-orange-200"],
+            ["LBO Returns (3pts)","≥25% = 3.0 | ≥20% = 2.2 | ≥15% = 1.4 | <15% = scaled to 0. Entry at 30% premium to share price, 7× leverage at 9% fixed, 4.5-year hold, exit multiple applied to NTM (Yr 6) EBITDA capped 20×.","bg-orange-50 border-orange-200"],
             ["DCF Upside (2pts)","Centred at 1.0. Compares DCF equity value per share vs current share price. Rises to 2.0 if significant upside; falls to 0 if significant downside.","bg-yellow-50 border-yellow-200"],
             ["PE Fit (1pt)","High=1.0, Medium-High=0.75, Medium=0.5, Low-Medium=0.25, Low=0.1.","bg-green-50 border-green-200"],
           ].map(([t,b,c])=>(
@@ -552,11 +608,12 @@ export default function App(){
               {label:"⬆ Upside",bg:"bg-green-50",border:"border-green-200",hd:"text-green-800",sub:"text-green-600",tag:"bg-green-100 text-green-700"}
             ];
             const scenarios=scenarioCfgs.map((s,si)=>{
-              const gUsed=co.growth+s.growthDelta;
+              const gUsed=co.defCAGR+s.growthDelta;
               const mUsed=Math.max(defEndM+s.marginDelta,co.ebitda);
               const exitMult=s.exitFactor<1?Math.round(entryMult*s.exitFactor*10)/10:null;
-              const lbo=si===1?co.lbo:runLBO(co.ntmRev,co.ntmRevX,co.ebitda,gUsed,mUsed,exitMult,entryTEV,co.lbo.levEBITDA);
-              const dcf=si===1?co.dcf:runDCF(co.name,gUsed,co.ebitda,mUsed,gWacc,gPgr,co.ntmRev);
+              const oConv=COMPANY_FINANCIALS[co.name]?(COMPANY_FINANCIALS[co.name].other27/COMPANY_FINANCIALS[co.name].ebitda27):0;
+              const lbo=si===1?co.lbo:runLBO(co.ntmRev,co.ntmRevX,co.ebitda,gUsed,mUsed,exitMult,entryTEV,co.lbo.levEBITDA,oConv,co.name,co.g2027Rate,co.defCAGR);
+              const dcf=si===1?co.dcf:runDCF(co.name,gUsed,co.g2027Rate,co.defCAGR,co.ebitda,mUsed,gWacc,gPgr,co.ntmRev);
               const dcfShare=si===1?co.dcfShare:dcfPerShare(dcf.intrinsic,co.sd);
               return{...scenarioMeta[si],gUsed,mUsed,lbo,dcf,dcfShare,reasons:s.reasons||[]};
             });
@@ -703,7 +760,7 @@ export default function App(){
             <div className="text-right">EBITDA Margin</div>
             <div className="text-right">IRR</div>
             <div className="text-right">MoM</div>
-            <div className="text-right">DCF/Share <span className="text-red-500 font-bold" title="Does not incorporate stock-based compensation">ex-SBC</span></div>
+            <div className="text-right">DCF/Share</div>
             <div className="text-center">AI Risk</div>
             <div className="text-center">Model</div>
             <div className="text-center">SoR</div>
@@ -716,7 +773,7 @@ export default function App(){
               const isOpen=expanded===co.name;
               const ov=getOv(co.name);
               const defEndM=Math.max(co.ebitda,Math.min(co.ebitda+10,40));
-              const g=ov.growth??co.growth;
+              const g=ov.growth??co.defCAGR;
               const eM=ov.endMargin??defEndM;
               const xM=ov.exitMult??Math.round(Math.min(co.ntmEBITDAX,LBO_MAX_EXIT)*10)/10;
               const hasOv=ov.growth!==undefined||ov.endMargin!==undefined||ov.exitMult!==undefined;
@@ -792,12 +849,12 @@ export default function App(){
                           {hasOv&&<button onClick={()=>resetOv(co.name)} className="text-xs text-red-500 border border-red-200 rounded px-2 py-0.5 hover:bg-red-50">Reset defaults</button>}
                         </div>
                         <div className="space-y-3 max-w-xl">
-                          <SliderInput label="Starting Rev Growth (Yr 1)" value={g} min={-5} max={50} step={0.5} unit="%" onChange={v=>setOv(co.name,"growth",v)}/>
+                          <SliderInput label="Revenue CAGR (2026–2035)" value={g} min={-5} max={50} step={0.5} unit="%" onChange={v=>setOv(co.name,"growth",v)}/>
                           <SliderInput label="End-State EBITDA Margin" value={eM} min={Math.min(co.ebitda,5)} max={65} step={0.5} unit="%" onChange={v=>setOv(co.name,"endMargin",v)}/>
                           <SliderInput label="LBO Exit EV/EBITDA" value={xM} min={3} max={25} step={0.5} unit="x" onChange={v=>setOv(co.name,"exitMult",v)}/>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                          {[["Default Growth",`${co.growth}%`],["Default End-Margin",`${defEndM}%`],["Default Exit Mult",`${Math.round(Math.min(co.ntmEBITDAX,LBO_MAX_EXIT)*10)/10}x`]].map(([k,v])=>(
+                          {[["Default CAGR",`${co.defCAGR}%`],["Default End-Margin",`${defEndM}%`],["Default Exit Mult",`${Math.round(Math.min(co.ntmEBITDAX,LBO_MAX_EXIT)*10)/10}x`]].map(([k,v])=>(
                             <div key={k} className="bg-gray-50 rounded p-1.5 border border-gray-100"><div className="text-gray-400">{k}</div><div className="font-medium text-gray-600">{v}</div></div>
                           ))}
                         </div>
@@ -809,20 +866,23 @@ export default function App(){
                         </button>
                         {openSec[`${co.name}_dcf`]&&(
                           <div className="mt-2 bg-white border border-blue-100 rounded-lg p-3 overflow-x-auto">
-                            <p className="text-xs text-gray-500 mb-3">DCF as of 6/30/2026. 2026 UFCF stubbed at 50% (H2 only). 2026-2027 = consensus actuals (locked). 2028+ growth: {g}%{g>10?` → converges to 10% by 2035 (implied CAGR ~${Math.round(((Math.pow(co.dcf.rows[DCF_YEARS-1].rev/co.dcf.rows[0].rev,1/DCF_YEARS)-1)*100)*10)/10}%)`:""}. EBITDA margin → {eM}%. SBC/D&A/Other held at 2027 % of rev. Tax rate 25%. WACC {gWacc}% · PGR {gPgr}%</p>
+                            <p className="text-xs text-gray-500 mb-3">DCF as of 6/30/2026. 2026 UFCF stubbed at 50% (H2 only). 2026-2027 = consensus (locked). Revenue CAGR: {g}% (2026–2035); 2028+ implied growth: {co.dcf.rows.length>=3?co.dcf.rows[2].revGrowth:"—"}%. EBITDA margin → {eM}%. SBC/D&A held at 2027 % of rev; Other CF held at 2027 UFCF pre-tax conversion. Tax rate 25%. WACC {gWacc}% · PGR {gPgr}%</p>
                             <p className="text-[10px] text-gray-400 mb-1 italic">All figures in $M unless otherwise noted</p>
+                            {(()=>{const allCols=co.dcf.hist?[co.dcf.hist,...co.dcf.rows]:co.dcf.rows;const projStart=co.dcf.hist?1:0;const first=allCols[0],last=allCols[allCols.length-1];const cagrCalc=(v0,v1)=>{if(!v0||!v1||v0<=0||v1<=0)return"";const c=Math.round((Math.pow(v1/v0,1/10)-1)*1000)/10;return fmtPct(c);};return(
                             <table className="w-full text-xs border-collapse min-w-max">
-                              <thead><tr><th className="px-2 py-1.5 text-left font-semibold text-gray-600 sticky left-0 bg-white w-36 border-b-2 border-black">Metric</th>{co.dcf.rows.map(r=><th key={r.yr} className="px-2 py-1.5 text-center font-semibold text-gray-600 whitespace-nowrap border-b-2 border-black">{r.label}</th>)}</tr></thead>
+                              <thead><tr><th className="px-2 py-1.5 text-left font-semibold text-gray-600 sticky left-0 bg-white w-36 border-b-2 border-black">Metric</th>{allCols.map((r,i)=><th key={r.label} className={`px-2 py-1.5 text-center font-semibold text-gray-600 whitespace-nowrap border-b-2 border-black`} style={i<projStart?{borderRight:"2px solid black"}:{}}>{r.label}</th>)}<th className="px-2 py-1.5 text-center font-semibold text-gray-600 whitespace-nowrap border-b-2 border-black" style={{borderLeft:"2px solid black"}}>'25–'35 CAGR</th></tr></thead>
                               <tbody>
-                                {[["Revenue",r=>fmtM(r.rev),{bold:true,topBorder:true}],["Rev Growth",r=>r.yr===1?"—":`${r.revGrowth}%`,{italic:true}],["EBITDA",r=>fmtM(r.ebitda),{topBorder:true,bg:true}],["EBITDA Margin",r=>`${r.ebitdaMargin}%`,{italic:true,bg:true}],["(-) SBC",r=>fmtM(r.sbc),{}],["SBC % Rev",r=>`${r.sbcPctRev}%`,{italic:true}],["EBITDA Post-SBC",r=>fmtM(r.ebitdaPostSBC),{bold:true,topBorder:true,bg:true}],["Post-SBC Margin",r=>`${r.ebitdaPostSBCMargin}%`,{italic:true,bg:true}],["(-) D&A",r=>fmtM(r.da),{}],["D&A % Rev",r=>`${r.daPctRev}%`,{italic:true}],["EBIT",r=>fmtM(r.ebit),{topBorder:true,bg:true}],["EBIT Margin",r=>`${r.ebitMargin}%`,{italic:true,bg:true}],["(-) Taxes",r=>fmtM(r.taxes),{}],["Tax Rate",r=>`${r.taxRate}%`,{italic:true}],["NOPAT",r=>fmtM(r.nopat),{topBorder:true,bg:true}],["NOPAT Margin",r=>`${r.nopatMargin}%`,{italic:true,bg:true}],["(+) D&A",r=>fmtM(r.da),{}],["(+/-) Other Cash Flow",r=>fmtM(r.otherCF),{}],["Other % Rev",r=>`${r.otherCFPctRev}%`,{italic:true}],["UFCF",r=>fmtM(r.ufcf),{bold:true,topBorder:true,bg:true}],["UFCF Margin",r=>`${r.ufcfMargin}%`,{italic:true,bg:true}],["UFCF % Conversion",r=>`${r.ufcfConv}%`,{italic:true,bg:true}],["Stub UFCF (H2 2026 = 50%)",r=>r.stubbed?fmtM(r.ufcfStub):fmtM(r.ufcf),{italic:true,bg:true}],["_spacer",null,{isSpacer:true}],["PV of UFCF",r=>fmtM(r.pv),{boxed:true,bold:true}]].map(([lbl,fn,opts])=>(
-                                  opts.isSpacer?<tr key={lbl}><td colSpan={co.dcf.rows.length+1} className="py-1.5"></td></tr>:
+                                {[["Revenue",r=>fmtM(r.rev),{bold:true,topBorder:true},()=>cagrCalc(first.rev,last.rev)],["Rev Growth",r=>r.yr===0&&!r.revGrowth?"—":fmtPct(r.revGrowth),{italic:true},null],["EBITDA",r=>fmtM(r.ebitda),{topBorder:true,bg:true},()=>cagrCalc(first.ebitda,last.ebitda)],["EBITDA Margin",r=>fmtPct(r.ebitdaMargin),{italic:true,bg:true},null],["(-) SBC",r=>fmtM(r.sbc),{},()=>cagrCalc(first.sbc,last.sbc)],["SBC % Rev",r=>fmtPct(r.sbcPctRev),{italic:true},null],["EBITDA Post-SBC",r=>fmtM(r.ebitdaPostSBC),{bold:true,topBorder:true,bg:true},()=>cagrCalc(first.ebitdaPostSBC,last.ebitdaPostSBC)],["Post-SBC Margin",r=>fmtPct(r.ebitdaPostSBCMargin),{italic:true,bg:true},null],["(-) D&A",r=>fmtM(r.da),{},()=>cagrCalc(first.da,last.da)],["D&A % Rev",r=>fmtPct(r.daPctRev),{italic:true},null],["EBIT",r=>fmtM(r.ebit),{topBorder:true,bg:true},()=>cagrCalc(first.ebit,last.ebit)],["EBIT Margin",r=>fmtPct(r.ebitMargin),{italic:true,bg:true},null],["(-) Taxes",r=>fmtM(r.taxes),{},()=>cagrCalc(first.taxes,last.taxes)],["Tax Rate",r=>fmtPct(r.taxRate),{italic:true},null],["NOPAT",r=>fmtM(r.nopat),{topBorder:true,bg:true},()=>cagrCalc(first.nopat,last.nopat)],["NOPAT Margin",r=>fmtPct(r.nopatMargin),{italic:true,bg:true},null],["(+) D&A",r=>fmtM(r.da),{},null],["(+/-) Other Cash Flow ¹",r=>fmtM(r.otherCF),{},()=>cagrCalc(Math.abs(first.otherCF),Math.abs(last.otherCF))],["Other % Rev",r=>fmtPct(r.otherCFPctRev),{italic:true},null],["UFCF",r=>fmtM(r.ufcf),{bold:true,topBorder:true,bg:true},()=>cagrCalc(first.ufcf,last.ufcf)],["UFCF Margin",r=>fmtPct(r.ufcfMargin),{italic:true,bg:true},null],["UFCF % Conversion",r=>fmtPct(r.ufcfConv),{italic:true,bg:true},null],["Stub UFCF (H2 2026 = 50%)",r=>r.stubbed?fmtM(r.ufcfStub):fmtM(r.ufcf),{italic:true,bg:true},null],["_spacer",null,{isSpacer:true},null],["PV of UFCF",r=>r.pv===null?"":fmtM(r.pv),{boxed:true,bold:true},null]].map(([lbl,fn,opts,cagrFn])=>(
+                                  opts.isSpacer?<tr key={lbl}><td colSpan={projStart+1} className="py-1.5" style={{borderRight:"2px solid black"}}></td><td colSpan={allCols.length-projStart} className="py-1.5"></td><td className="py-1.5" style={{borderLeft:"2px solid black"}}></td></tr>:
                                   <tr key={lbl} className={`${opts.topBorder?"border-t-2 border-black":""} ${opts.bg?"bg-blue-50":""}`}>
                                     <td className={`px-2 py-1 text-gray-700 sticky left-0 whitespace-nowrap ${opts.bold?"font-bold":""} ${opts.italic?"italic text-gray-400":"font-medium"} ${opts.blue?"text-blue-700":""} ${opts.bg?"bg-blue-50":"bg-white"}`} style={opts.boxed?{borderTop:"2px solid black",borderBottom:"2px solid black",borderLeft:"2px solid black"}:{}}>{lbl}</td>
-                                    {co.dcf.rows.map((r,ri)=><td key={r.yr} className={`px-2 py-1 text-center ${opts.bold?"font-bold":""} ${opts.italic?"italic text-gray-400":""} ${opts.blue?"text-blue-700 font-medium":""}`} style={opts.boxed?{borderTop:"2px solid black",borderBottom:"2px solid black",...(ri===co.dcf.rows.length-1?{borderRight:"2px solid black"}:{})}:{}}>{fn(r)}</td>)}
+                                    {allCols.map((r,ri)=><td key={r.label} className={`px-2 py-1 text-center ${opts.bold?"font-bold":""} ${opts.italic?"italic text-gray-400":""} ${opts.blue?"text-blue-700 font-medium":""}`} style={{...(opts.boxed?{borderTop:"2px solid black",borderBottom:"2px solid black",...(ri===allCols.length-1?{borderRight:"2px solid black"}:{})}:{}),...(ri<projStart?{borderRight:"2px solid black"}:{})}}>{fn(r)}</td>)}
+                                    <td className={`px-2 py-1 text-center font-semibold ${opts.italic?"italic text-gray-400":""}`} style={{borderLeft:"2px solid black",...(opts.boxed?{borderTop:"2px solid black",borderBottom:"2px solid black",borderRight:"2px solid black"}:{})}}>{cagrFn?cagrFn():""}</td>
                                   </tr>
                                 ))}
                               </tbody>
-                            </table>
+                            </table>)})()}
+                            <p className="text-[10px] text-gray-400 mt-1 italic">¹ Other Cash Flow = change in NWC + capex. UFCF (pre-tax) = EBITDA + Other CF; conversion % = UFCF (pre-tax) / EBITDA. 2028+ holds 2027 conversion constant.</p>
                             <table className="mt-4 text-xs w-auto">
                               <tbody>
                                 {(()=>{
@@ -864,55 +924,93 @@ export default function App(){
                         </button>
                         {openSec[`${co.name}_lbo`]&&(
                           <div className="mt-2 bg-white border border-orange-100 rounded-lg p-3 overflow-x-auto">
+                            <p className="text-[10px] italic text-gray-500 mb-2">All figures in $M unless otherwise noted</p>
                             <div className="grid grid-cols-2 gap-4 mb-4">
-                              <div className="bg-orange-50 rounded p-3 text-xs space-y-1.5">
-                                <p className="font-bold text-orange-900 mb-2">📥 Entry Bridge</p>
-                                {[
-                                  [co.sd?"Current Share Price":"Current TEV", co.sd?`$${co.sd.sharePrice}`:fmt(co.tev),""],
-                                  [co.sd?`× Shares Out`:"",co.sd?`${co.sd.sharesOut}M`:"","text-gray-400"],
-                                  [co.sd?"= Market Cap":"",co.sd?fmt(co.sd.marketCap):"","text-gray-400"],
-                                  ["Take-Private Premium (30%)",co.sd?`+${fmt(Math.round(co.sd.marketCap*0.3))} on equity`:`+${fmt(Math.round(co.tev*0.3))}`,"text-orange-600"],
-                                  [co.sd?"(+) Net Debt":"",co.sd?fmt(co.sd.netDebt):"","text-gray-400"],
-                                  ["Entry TEV",fmt(co.lbo.entryTEV),"font-bold border-t border-orange-300 pt-1"],
-                                  ["Entry EV/EBITDA",`${co.lbo.entryEBITDAMult}x`,""],
-                                  ["Entry EBITDA",fmt(co.lbo.entryEBITDA),""],
-                                  [`(–) Gross Debt (7× LTM¹)`,`(${fmt(co.lbo.grossDebt)})`,"text-red-600"],
-                                  ["Equity In",fmt(co.lbo.equityIn),"font-bold text-orange-800"],
-                                ].filter(([k])=>k!=="").map(([k,v,c])=>(
+                              <div className="border border-gray-200 rounded text-xs overflow-hidden">
+                                <div className="bg-gray-900 text-white font-bold px-3 py-1.5">Purchase Price</div>
+                                <div className="px-3 py-2 space-y-1.5">
+                                {(()=>{const sd=co.sd,offerPrice=sd?Math.round(sd.sharePrice*LBO_PREM*100)/100:null,equityVal=sd?Math.round(offerPrice*sd.sharesOut):null,entryTEV=co.lbo.entryTEV;return[
+                                  ["Share Price",sd?`$${sd.sharePrice.toFixed(2)}`:"—",""],
+                                  ["(×) Premium",`${Math.round((LBO_PREM-1)*100)}%`,"text-gray-400"],
+                                  ["Offer Price",sd?`$${offerPrice.toFixed(2)}`:"—","font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                  ["(×) FDSO",sd?`${sd.sharesOut}`:"—","text-gray-400"],
+                                  ["Equity Value",sd?fmtM(equityVal):"—","font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                  ["(+) Net Debt",sd?fmtM(sd.netDebt):"—","text-gray-400"],
+                                  ["Enterprise Value",fmtM(entryTEV),"font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                  ["NTM EBITDA ³",fmtM(co.lbo.entryEBITDA),"mt-2"],
+                                  ["Implied Entry Multiple",`${co.lbo.entryEBITDAMult}x`,"font-medium"],
+                                ];})().map(([k,v,c])=>(
                                   <div key={k} className={`flex justify-between ${c}`}><span className="text-gray-500">{k}</span><span>{v}</span></div>
                                 ))}
+                                </div>
                               </div>
-                              <div className="bg-green-50 rounded p-3 text-xs space-y-1.5">
-                                <p className="font-bold text-green-900 mb-2">📤 Exit Bridge (5yr hold · NTM multiple)</p>
+                              <div className="border border-gray-200 rounded text-xs overflow-hidden">
+                                <div className="bg-gray-900 text-white font-bold px-3 py-1.5">Exit Analysis</div>
+                                <div className="px-3 py-2 space-y-1.5">
                                 {[
-                                  ["NTM EBITDA (Yr 6)",fmt(co.lbo.exitEBITDA),""],
-                                  [`Exit EV/EBITDA (≤${LBO_MAX_EXIT}×)`,`${co.lbo.exitEBITDAMult}x`,""],
-                                  ["Exit TEV",fmt(co.lbo.exitTEV),"font-bold border-t border-green-300 pt-1"],
-                                  ["(–) Gross Debt",`(${fmt(co.lbo.grossDebt)})`,"text-red-600"],
-                                  ["(+) Accumulated Cash",`+${fmt(co.lbo.cumCash)}`,"text-green-600"],
-                                  ["Net Debt at Exit",fmt(co.lbo.grossDebt-co.lbo.cumCash),""],
-                                  ["Equity Out",fmt(co.lbo.exitEquity),"font-bold text-green-800 border-t border-green-300 pt-1"],
-                                  ["MOIC",`${co.lbo.moic}×`,"font-bold text-green-700"],
-                                  ["IRR",`${co.lbo.irr}% ${irrLabel(co.lbo.irr)}`,"font-bold text-green-700"],
+                                  ["NTM (2031) EBITDA",fmtM(co.lbo.exitEBITDA),""],
+                                  ["Exit Multiple",`${co.lbo.exitEBITDAMult}x`,""],
+                                  ["Exit TEV",fmtM(co.lbo.exitTEV),"font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                  ["(–) Debt",`(${fmtM(co.lbo.grossDebt)})`,"text-red-600"],
+                                  ["(+) Cash",fmtM(co.lbo.eopCashFinal),"text-green-600"],
+                                  ["(–) Options ⁴",`(${fmtM(co.lbo.optionsDilution)})`,"text-red-600"],
+                                  ["Equity Value",fmtM(co.lbo.exitEquity),"font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                  ["IRR",`${co.lbo.irr}% ${irrLabel(co.lbo.irr)}`,"font-bold mt-2 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                  ["MoM",`${co.lbo.moic}×`,"font-bold bg-orange-50 -mx-3 px-3 py-0.5"],
                                 ].map(([k,v,c])=>(
                                   <div key={k} className={`flex justify-between ${c}`}><span className="text-gray-500">{k}</span><span>{v}</span></div>
                                 ))}
+                                </div>
                               </div>
                             </div>
-                            <p className="text-xs font-semibold text-gray-700 mb-1">Annual Projection (Yrs 1–5 hold · Yr 6 = NTM EBITDA at exit)</p>
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                              <div className="border border-gray-200 rounded text-xs overflow-hidden">
+                                <div className="bg-gray-900 text-white font-bold px-3 py-1.5">Sources</div>
+                                <div className="px-3 py-2 space-y-1.5">
+                                {[
+                                  ["Debt",fmtM(co.lbo.grossDebt),""],
+                                  ["Equity",fmtM(co.lbo.equityIn),""],
+                                  ["Total Sources",fmtM(co.lbo.totalUses),"font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                ].map(([k,v,c])=>(
+                                  <div key={k} className={`flex justify-between ${c}`}><span className="text-gray-500">{k}</span><span>{v}</span></div>
+                                ))}
+                                </div>
+                              </div>
+                              <div className="border border-gray-200 rounded text-xs overflow-hidden">
+                                <div className="bg-gray-900 text-white font-bold px-3 py-1.5">Uses</div>
+                                <div className="px-3 py-2 space-y-1.5">
+                                {[
+                                  ["Enterprise Value",fmtM(co.lbo.entryTEV),""],
+                                  ["Cash to Balance Sheet",fmtM(co.lbo.cashToBS),"text-gray-400"],
+                                  ["Financing Fees",fmtM(co.lbo.financingFees),"text-gray-400"],
+                                  ["Transaction Fees",fmtM(co.lbo.txnFees),"text-gray-400"],
+                                  ["Total Uses",fmtM(co.lbo.totalUses),"font-bold border-t-2 border-black pt-1 bg-orange-50 -mx-3 px-3 py-0.5"],
+                                ].map(([k,v,c])=>(
+                                  <div key={k} className={`flex justify-between ${c}`}><span className="text-gray-500">{k}</span><span>{v}</span></div>
+                                ))}
+                                </div>
+                              </div>
+                            </div>
+                            {(()=>{const lboHist=co.lbo.hist;const lboAllCols=lboHist?[lboHist,...co.lbo.lboRows]:co.lbo.lboRows;const lboProjStart=lboHist?1:0;return(<>
+                            <p className="text-xs font-semibold text-gray-700 mb-1">Annual Projection (4.5yr hold · NTM exit)</p>
                             <table className="w-full text-xs border-collapse min-w-max">
-                              <thead><tr className="bg-gray-50"><th className="border border-gray-200 px-2 py-1.5 text-left font-semibold text-gray-600 sticky left-0 bg-gray-50 w-40">Metric</th>{co.lbo.lboRows.map(r=><th key={r.yr} className={`border border-gray-200 px-2 py-1.5 text-center font-semibold ${r.isNTM?"text-orange-700 bg-orange-50":"text-gray-600"}`}>{r.isNTM?"Yr 6 (NTM)":`Yr ${r.yr}`}</th>)}</tr></thead>
+                              <thead><tr className="border-b-2 border-black"><th className="px-2 py-1.5 text-left font-semibold text-gray-600 sticky left-0 bg-white w-40">Metric</th>{lboAllCols.map((r,ri)=><th key={r.label} className={`px-2 py-1.5 text-center font-semibold ${r.isNTM?"text-orange-700":"text-gray-600"}`} style={ri<lboProjStart?{borderRight:"2px solid black"}:{}}>{r.label}</th>)}</tr></thead>
                               <tbody>
-                                {[["Revenue ($M)",r=>fmtN(r.rev),""],["EBITDA ($M)",r=>r.isNTM?<span className="font-bold text-orange-700">{fmtN(r.ebitda)}</span>:fmtN(r.ebitda),""],["EBITDA Margin",r=>`${r.margin}%`,""],["Unlev. FCF (×85%)",r=>r.isNTM?"—":fmtN(r.ufcf),"text-gray-500"],["Interest ($M)",r=>r.isNTM?"—":`(${fmtN(r.interest)})`,"text-red-500"],["Tax (22% on EBT)",r=>r.isNTM?"—":`(${fmtN(r.tax)})`,"text-red-400"],["Lev. FCF ($M)",r=>r.isNTM?"—":fmtN(r.lfcf),"text-green-700 font-medium"],["Cum. Cash ($M)",r=>r.isNTM?"—":fmtN(r.cumCash),"text-green-600 font-medium"]].map(([lbl,fn,cls],i)=>(
-                                  <tr key={lbl} className={i%2===0?"bg-white":"bg-gray-50"}>
-                                    <td className="border border-gray-200 px-2 py-1.5 font-medium text-gray-700 sticky left-0 bg-inherit whitespace-nowrap">{lbl}</td>
-                                    {co.lbo.lboRows.map(r=><td key={r.yr} className={`border border-gray-200 px-2 py-1.5 text-center ${r.isNTM?"bg-orange-50 ":""}${cls}`}>{fn(r)}</td>)}
+                                {[["Revenue",r=>fmtM(r.rev),{bold:true,topBorder:true}],["Rev Growth",r=>r.isHist?"—":fmtPct(r.revGrowth),{italic:true}],["EBITDA",r=>fmtM(r.ebitda),{topBorder:true,bg:true}],["EBITDA Margin",r=>fmtPct(r.margin),{italic:true,bg:true}],["(+/-) Other Cash Flow ²",r=>r.isNTM?"—":fmtM(r.otherCF),{}],["Other % Rev",r=>r.isNTM?"—":fmtPct(Math.round((r.otherCF/r.rev)*1000)/10),{italic:true}],["UFCF (Pre-Tax)",r=>r.isNTM?"—":fmtM(r.ufcfPretax),{bold:true,topBorder:true,bg:true}],["UFCF Pre-Tax Conv.",r=>r.isNTM?"—":fmtPct(r.ufcfPretaxConv),{italic:true,bg:true}],["spacer",()=>"",{spacer:true}],["BoP Cash",r=>r.isNTM||r.isHist?"—":fmtM(r.bopCash),{topBorder:true}],["(+) UFCF (Pre-Tax)",r=>r.isNTM||r.isHist?"—":fmtM(r.cashUfcf),{}],["(-) Taxes",r=>r.isNTM||r.isHist?"—":`(${fmtM(r.tax)})`,{}],["(-) Net Interest Expense",r=>r.isNTM||r.isHist?"—":`(${fmtM(r.interest)})`,{}],["EoP Cash",r=>r.isNTM||r.isHist?"—":fmtM(r.eopCash),{bold:true,topBorder:true,bg:true}]].map(([lbl,fn,opts])=>(
+                                  opts.spacer?<tr key={lbl} className="h-3"><td colSpan={lboAllCols.length+1}></td></tr>:
+                                  <tr key={lbl} className={`${opts.topBorder?"border-t-2 border-black":""} ${opts.bg?"bg-orange-50":""}`}>
+                                    <td className={`px-2 py-1 text-gray-700 sticky left-0 whitespace-nowrap ${opts.bold?"font-bold":"font-medium"} ${opts.italic?"italic text-gray-400":""} ${opts.bg?"bg-orange-50":"bg-white"}`}>{lbl}</td>
+                                    {lboAllCols.map((r,ri)=><td key={r.label} className={`px-2 py-1 text-center ${opts.bold?"font-bold":""} ${opts.italic?"italic text-gray-400":""} ${r.isNTM&&opts.bold?"text-orange-700":""}`} style={ri<lboProjStart?{borderRight:"2px solid black"}:{}}>{fn(r)}</td>)}
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
-                            <p className="text-xs text-gray-400 mt-2">Gross debt: {fmt(co.lbo.grossDebt)} fixed throughout hold. Interest: {fmt(co.lbo.grossDebt)} × 9.0% = {fmt(Math.round(co.lbo.grossDebt*LBO_INT_RATE))}/yr. Exit multiple applied to Yr 6 NTM EBITDA; 5-year hold for IRR.</p>
-                            <p className="text-xs text-gray-400 mt-1">¹ Debt sized at 7× LTM EBITDA {fmt(co.lbo.levEBITDA)}{co.lbo.levEBITDA!==co.lbo.entryEBITDA?` vs NTM EBITDA ${fmt(co.lbo.entryEBITDA)} — LTM convention reflects actual trailing cash generation for lender underwriting`:` (LTM = NTM for this company)`}.</p>
+                            <p className="text-[10px] text-gray-400 mt-1 italic">² Other Cash Flow = change in NWC + capex. UFCF (pre-tax) = EBITDA + Other CF; conversion % = UFCF (pre-tax) / EBITDA. Held constant at 2027 consensus level.</p>
+                            <p className="text-xs text-gray-400 mt-2">Gross debt: {fmt(co.lbo.grossDebt)} fixed throughout hold. Interest: {fmt(co.lbo.grossDebt)} × 8.0% ⁶ = {fmt(Math.round(co.lbo.grossDebt*LBO_INT_RATE))}/yr. Exit multiple applied to NTM EBITDA; 4.5-year hold for IRR.</p>
+                            <p className="text-xs text-gray-400 mt-1">¹ Debt sized at 7× LTM EBITDA as of 6/30/2026 (50% CY2025 + 50% CY2026) = {fmt(co.lbo.levEBITDA)}.</p>
+                            <p className="text-[10px] text-gray-400 mt-1 italic">³ NTM EBITDA as of 6/30/2026 (consensus estimates).</p>
+                            <p className="text-[10px] text-gray-400 mt-1 italic">⁴ Options dilution estimated at 10% of equity gains (exit equity value less equity invested). ⁵ 2026 cash flows stubbed at 50% (H2 only) reflecting 6/30/2026 entry date. ⁶ Assumed blended cost of debt of 8.0%.</p>
+                            </>);})()}
                           </div>
                         )}
                       </div>
