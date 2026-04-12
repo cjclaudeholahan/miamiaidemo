@@ -58,7 +58,7 @@ function runDCF(companyName,growthPct,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
       ufcf:Math.round(ufcf),ufcfMargin:Math.round((ufcf/rev)*1000)/10,ufcfConv:Math.round((ufcf/ebitdaPostSBC)*1000)/10,pv:Math.round(pv)});
   }
   const last=rows[DCF_YEARS-1],tvUFCF=last.ufcf*(1+pD),tv=tvUFCF/(wD-pD),pvTV=tv/Math.pow(1+wD,DCF_YEARS-0.5);
-  return{rows,pvSum:Math.round(pvSum),pvTV:Math.round(pvTV),intrinsic:Math.round(pvSum+pvTV),lastUFCF:last.ufcf};
+  return{rows,pvSum:Math.round(pvSum),tv:Math.round(tv),pvTV:Math.round(pvTV),intrinsic:Math.round(pvSum+pvTV),lastUFCF:last.ufcf,tvUFCF:Math.round(tvUFCF),wacc:wD,pgr:pD};
 }
 function runLBO(ntmRev,ntmRevX,ebitdaPct,growthPct,endMarginPct,exitMultOverride,entryTEVOverride,ltmEBITDAOv){
   const startM=ebitdaPct/100,endM=endMarginPct/100;
@@ -820,11 +820,39 @@ export default function App(){
                                 ))}
                               </tbody>
                             </table>
-                            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                              {[["PV of UFCFs (2026–2035)",fmt(co.dcf.pvSum),""],["PV of Terminal Value",fmt(co.dcf.pvTV),""],["DCF Intrinsic TEV",fmt(co.dcf.intrinsic),"font-bold"],["(–) Net Debt",fmt(co.sd?.netDebt??0),""],["DCF Equity Value",fmt(co.dcf.intrinsic-(co.sd?.netDebt??0)),"font-bold"],["÷ Shares Out",co.sd?`${co.sd.sharesOut}M`:"N/A",""],["DCF / Share",co.dcfShare?`$${co.dcfShare}`:"N/A","font-bold text-blue-800"],["Current Share Price",co.sd?`$${co.sd.sharePrice}`:"N/A",""],["Implied Upside",co.sharePct!==null?`${co.sharePct>0?"+":""}${co.sharePct}%`:"N/A",co.sharePct>0?"text-green-700 font-bold":"text-red-600 font-bold"]].map(([k,v,c])=>(
-                                <div key={k} className="bg-blue-50 rounded p-2"><div className="text-gray-400">{k}</div><div className={`text-gray-800 ${c}`}>{v}</div></div>
-                              ))}
-                            </div>
+                            <table className="mt-4 text-xs w-auto">
+                              <tbody>
+                                {(()=>{
+                                  const nd=co.sd?.netDebt??0,eqV=co.dcf.intrinsic-nd,shr=co.sd?.sharesOut,dcfShr=shr?(eqV/shr).toFixed(2):null,curP=co.sd?.sharePrice,prem=dcfShr&&curP?Math.round((dcfShr/curP-1)*100):null;
+                                  return [
+                                    ["NPV of UFCFs (2026–2035)","",fmt(co.dcf.pvSum),false,false],
+                                    ["","","",false,false,true],
+                                    ["Terminal Value Calculation","","",true,false],
+                                    [`Terminal Year UFCF (2035) × (1 + PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`${fmtM(co.dcf.lastUFCF)} × ${(1+co.dcf.pgr).toFixed(3)}`,fmt(co.dcf.tvUFCF),false,false],
+                                    [`÷ (WACC ${Math.round(co.dcf.wacc*1000)/10}% – PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`÷ ${Math.round((co.dcf.wacc-co.dcf.pgr)*1000)/10}%`,fmt(co.dcf.tv),false,false],
+                                    [`Discounted to present (Year ${DCF_YEARS})`,"",fmt(co.dcf.pvTV),false,false],
+                                    ["","","",false,false,true],
+                                    ["NPV of UFCFs","",fmt(co.dcf.pvSum),false,false],
+                                    ["(+) NPV of Terminal Value","",fmt(co.dcf.pvTV),false,false],
+                                    ["DCF Intrinsic TEV","",fmt(co.dcf.intrinsic),true,true],
+                                    ["(–) Net Debt","",fmt(nd),false,false],
+                                    ["DCF Equity Value","",fmt(eqV),true,true],
+                                    [`÷ Shares Outstanding`,"",shr?`${shr}M`:"N/A",false,false],
+                                    ["DCF / Share","",dcfShr?`$${dcfShr}`:"N/A",true,true],
+                                    ["","","",false,false,true],
+                                    ["Current Share Price","",curP?`$${curP}`:"N/A",false,false],
+                                    ["Implied Premium / (Discount)","",prem!==null?`${prem>0?"+":""}${prem}%`:"N/A",true,false,false,prem],
+                                  ].map(([label,calc,val,bold,border,spacer,premVal],i)=>(
+                                    spacer?<tr key={i}><td colSpan={3} className="py-1.5"></td></tr>:
+                                    <tr key={i} className={border?"border-t-2 border-black":""}>
+                                      <td className={`pr-6 py-0.5 text-gray-700 whitespace-nowrap ${bold?"font-bold":""}`}>{label}</td>
+                                      <td className="pr-4 py-0.5 text-gray-400 text-right whitespace-nowrap">{calc}</td>
+                                      <td className={`py-0.5 text-right font-medium whitespace-nowrap ${bold?"font-bold":""} ${premVal!==undefined?(premVal>0?"text-green-700":"text-red-600"):""}`}>{val}</td>
+                                    </tr>
+                                  ))
+                                })()}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </div>
