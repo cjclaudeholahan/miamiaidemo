@@ -790,7 +790,7 @@ export default function App(){
                         {co.tev>=10000&&<span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">&gt;$10B</span>}
                         {hasOv&&<span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">custom</span>}
                       </div>
-                      <div className="text-gray-400 truncate">{co.vertical}</div>
+                      <div className="text-gray-400">{co.vertical}</div>
                     </div>
                     <div className="text-right font-semibold">{fmt(co.tev)}</div>
                     <div className="text-right font-semibold">{co.ntmRevX}x</div>
