@@ -517,7 +517,7 @@ export default function App(){
         <h1 className="text-xl font-bold text-gray-900 mb-1">Miami Offsite Demo — Take-Private Screen</h1>
         <p className="text-xs text-gray-500 mb-6">Permira · Enter password to continue</p>
         <form onSubmit={e=>{e.preventDefault();if(pw==="miami")setAuthed(true);else{setPw("");alert("Incorrect password");}}} className="space-y-4">
-          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Password" autoFocus className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"/>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Password" autoFocus className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400"/>
           <button type="submit" className="w-full bg-gray-900 text-white rounded py-2 text-sm font-medium hover:bg-gray-800 transition-colors">Enter</button>
         </form>
       </div>
@@ -735,7 +735,7 @@ export default function App(){
                   placeholder="Search company or vertical…"
                   value={searchQuery}
                   onChange={e=>setSearchQuery(e.target.value)}
-                  className="w-full border border-gray-200 rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 placeholder-gray-400"
+                  className="w-full border border-gray-200 rounded-md px-3 py-1.5 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 placeholder-gray-400"
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
                   <PillRow label="Show" opts={["All","Top Picks","Avoid"]} val={avoidFilter} set={setAvoidFilter}/>
