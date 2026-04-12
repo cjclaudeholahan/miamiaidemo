@@ -528,7 +528,7 @@ export default function App(){
     <div className="max-w-6xl mx-auto p-4">
       <div className="mb-4">
         <h1 className="text-xl font-bold text-gray-900">Miami Offsite Demo — Take-Private Screen</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Permira · {companies.length} companies · Data as of 2/27/2026</p>
+        <p className="text-xs text-gray-500 mt-0.5">Permira · {companies.length} companies · Data as of 3/31/2026</p>
       </div>
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-gray-200">
