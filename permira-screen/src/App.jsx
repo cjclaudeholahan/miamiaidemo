@@ -525,7 +525,7 @@ export default function App(){
   );
   return(
     <div className="bg-gray-50 min-h-screen font-sans text-sm">
-    <div className="max-w-6xl mx-auto p-4">
+    <div className="max-w-6xl mx-auto p-2 sm:p-4">
       <div className="mb-4">
         <h1 className="text-xl font-bold text-gray-900">Miami Offsite Demo — Take-Private Screen</h1>
         <p className="text-xs text-gray-500 mt-0.5">Permira · {companies.length} companies · Data as of 3/31/2026</p>
@@ -569,7 +569,7 @@ export default function App(){
       {tab==="methodology"&&(
         <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-3 text-xs">
           <h2 className="font-bold text-gray-900 text-sm mb-1">Composite Score (0–10 · max 15 raw pts → normalized)</h2>
-          <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-3">
             {[["AI Risk","3.0pts","Highest weight"],["Biz Quality","3.0pts","SoR, moat, CAGR"],["Valuation","3.0pts","EV/EBITDA primary"],["LBO Returns","3.0pts","IRR thresholds"],["DCF Upside","2.0pts","DCF/share vs price"],["PE Fit","1.0pt","FCF, levers, scale"]].map(([d,p,n])=>(
               <div key={d} className="bg-gray-50 border border-gray-200 rounded p-2"><div className="font-semibold text-gray-800">{d}</div><div className="text-green-700 font-bold">{p}</div><div className="text-gray-400">{n}</div></div>
             ))}
@@ -648,7 +648,7 @@ export default function App(){
                 <div className="p-5 space-y-5">
                   <div>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">📊 3-Scenario Returns Analysis</p>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {scenarios.map(s=>(
                         <div key={s.label} className={`${s.bg} border ${s.border} rounded-lg p-3 flex flex-col gap-2`}>
                           <div>
@@ -751,7 +751,7 @@ export default function App(){
             );
           })()}
           {/* Column header */}
-          <div className="bg-white border border-gray-200 rounded-lg mb-1 px-3 py-1.5 text-xs text-gray-400 font-medium" style={{display:"grid",gridTemplateColumns:"28px 1fr 96px 54px 76px 64px 72px 50px 46px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
+          <div className="bg-white border border-gray-200 rounded-lg mb-1 px-3 py-1.5 text-xs text-gray-400 font-medium hidden md:grid" style={{gridTemplateColumns:"28px 1fr 96px 54px 76px 64px 72px 50px 46px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
             <div></div><div>Company</div>
             <div className="text-right">Enterprise Value</div>
             <div className="text-right">EV/Rev</div>
@@ -779,9 +779,9 @@ export default function App(){
               const hasOv=ov.growth!==undefined||ov.endMargin!==undefined||ov.exitMult!==undefined;
               return(
                 <div key={co.name} className={`bg-white rounded-lg border ${co.avoid?"border-red-200":co.tev>=10000?"border-blue-100":"border-gray-200"} overflow-hidden`}>
-                  {/* Summary row */}
-                  <div className="px-3 py-2 cursor-pointer hover:bg-gray-50 select-none text-xs" onClick={()=>setExpanded(isOpen?null:co.name)}
-                    style={{display:"grid",gridTemplateColumns:"28px 1fr 96px 54px 76px 64px 72px 50px 46px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
+                  {/* Desktop summary row */}
+                  <div className="px-3 py-2 cursor-pointer hover:bg-gray-50 select-none text-xs hidden md:grid" onClick={()=>setExpanded(isOpen?null:co.name)}
+                    style={{gridTemplateColumns:"28px 1fr 96px 54px 76px 64px 72px 50px 46px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
                     <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600 flex-shrink-0">{rank}</div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1 flex-wrap">
@@ -806,6 +806,33 @@ export default function App(){
                     <div className="flex justify-center"><span className={`px-1.5 py-0.5 rounded-full font-medium ${co.sor?"bg-indigo-100 text-indigo-800":"bg-gray-100 text-gray-500"}`}>{co.sor?"SoR":"~SoR"}</span></div>
                     <div className={`text-right text-base font-bold ${scColor(co.total)}`}>{co.total}</div>
                     <div className="text-gray-400 text-center">{isOpen?"▲":"▼"}</div>
+                  </div>
+                  {/* Mobile summary card */}
+                  <div className="md:hidden px-3 py-2.5 cursor-pointer hover:bg-gray-50 select-none text-xs space-y-1.5" onClick={()=>setExpanded(isOpen?null:co.name)}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600 flex-shrink-0">{rank}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="font-semibold text-gray-900">{co.name}</span>
+                          {co.avoid&&<span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">AVOID</span>}
+                          {co.tev>=10000&&<span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">&gt;$10B</span>}
+                        </div>
+                        <div className="text-gray-400">{co.vertical}</div>
+                      </div>
+                      <div className={`text-base font-bold ${scColor(co.total)}`}>{co.total}</div>
+                      <div className="text-gray-400">{isOpen?"▲":"▼"}</div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-gray-500 pl-8">
+                      <span>TEV <strong className="text-gray-700">{fmt(co.tev)}</strong></span>
+                      <span>EV/EBITDA <strong className="text-gray-700">{co.ntmEBITDAX}x</strong></span>
+                      <span>IRR <strong className={irrColor(co.lbo.irr)}>{Math.round(co.lbo.irr)}%</strong></span>
+                      <span>MoM <strong className={irrColor(co.lbo.irr)}>{co.lbo.moic}x</strong></span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pl-8">
+                      <span className={`px-1.5 py-0.5 rounded-full font-medium ${riskColor(co.aiRisk)}`}>{co.aiRisk}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full font-medium ${co.sor?"bg-indigo-100 text-indigo-800":"bg-gray-100 text-gray-500"}`}>{co.sor?"SoR":"~SoR"}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full font-medium ${co.pricing==="Usage-Based"?"bg-blue-100 text-blue-800":"bg-purple-100 text-purple-800"}`}>{co.pricing==="Usage-Based"?"Usage":"Seat"}</span>
+                    </div>
                   </div>
                   {/* Expanded */}
                   {isOpen&&(
@@ -853,7 +880,7 @@ export default function App(){
                           <SliderInput label="End-State EBITDA Margin" value={eM} min={Math.min(co.ebitda,5)} max={65} step={0.5} unit="%" onChange={v=>setOv(co.name,"endMargin",v)}/>
                           <SliderInput label="LBO Exit EV/EBITDA" value={xM} min={3} max={25} step={0.5} unit="x" onChange={v=>setOv(co.name,"exitMult",v)}/>
                         </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                           {[["Default CAGR",`${co.defCAGR}%`],["Default End-Margin",`${defEndM}%`],["Default Exit Mult",`${Math.round(Math.min(co.ntmEBITDAX,LBO_MAX_EXIT)*10)/10}x`]].map(([k,v])=>(
                             <div key={k} className="bg-gray-50 rounded p-1.5 border border-gray-100"><div className="text-gray-400">{k}</div><div className="font-medium text-gray-600">{v}</div></div>
                           ))}
@@ -925,7 +952,7 @@ export default function App(){
                         {openSec[`${co.name}_lbo`]&&(
                           <div className="mt-2 bg-white border border-orange-100 rounded-lg p-3 overflow-x-auto">
                             <p className="text-[10px] italic text-gray-500 mb-2">All figures in $M unless otherwise noted</p>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                               <div className="border border-gray-200 rounded text-xs overflow-hidden">
                                 <div className="bg-gray-900 text-white font-bold px-3 py-1.5">Purchase Price</div>
                                 <div className="px-3 py-2 space-y-1.5">
@@ -963,7 +990,7 @@ export default function App(){
                                 </div>
                               </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                               <div className="border border-gray-200 rounded text-xs overflow-hidden">
                                 <div className="bg-gray-900 text-white font-bold px-3 py-1.5">Sources</div>
                                 <div className="px-3 py-2 space-y-1.5">
