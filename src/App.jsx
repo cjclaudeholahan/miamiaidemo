@@ -717,7 +717,7 @@ export default function App(){
       <div className="bg-white rounded-lg shadow-lg p-8 w-80">
         <h1 className="text-xl font-bold text-gray-900 mb-1">Miami Offsite Demo — Take-Private Screen</h1>
         <p className="text-xs text-gray-500 mb-6">Permira · Enter password to continue</p>
-        <form onSubmit={e=>{e.preventDefault();if(pw==="vsaas")setAuthed(true);else{setPw("");alert("Incorrect password");}}} className="space-y-4">
+        <form onSubmit={e=>{e.preventDefault();if(pw==="miami")setAuthed(true);else{setPw("");alert("Incorrect password");}}} className="space-y-4">
           <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Password" autoFocus className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"/>
           <button type="submit" className="w-full bg-gray-900 text-white rounded py-2 text-sm font-medium hover:bg-gray-800 transition-colors">Enter</button>
         </form>
@@ -951,13 +951,13 @@ export default function App(){
             );
           })()}
           {/* Column header */}
-          <div className="bg-white border border-gray-200 rounded-lg mb-1 px-3 py-1.5 text-xs text-gray-400 font-medium" style={{display:"grid",gridTemplateColumns:"28px 1fr 68px 76px 54px 60px 44px 96px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
+          <div className="bg-white border border-gray-200 rounded-lg mb-1 px-3 py-1.5 text-xs text-gray-400 font-medium" style={{display:"grid",gridTemplateColumns:"28px 1fr 96px 54px 76px 64px 72px 78px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
             <div></div><div>Company</div>
-            <div className="text-right">TEV</div>
+            <div className="text-right">Enterprise Value</div>
             <div className="text-right">EV/Rev</div>
-            <div className="text-right">Growth</div>
             <div className="text-right">EV/EBITDA</div>
-            <div className="text-right">EBITDA%</div>
+            <div className="text-right">Rev Growth</div>
+            <div className="text-right">EBITDA Margin</div>
             <div className="text-right">IRR</div>
             <div className="text-right">DCF/Share <span className="text-red-500 font-bold" title="Does not incorporate stock-based compensation">ex-SBC</span></div>
             <div className="text-center">AI Risk</div>
@@ -980,7 +980,7 @@ export default function App(){
                 <div key={co.name} className={`bg-white rounded-lg border ${co.avoid?"border-red-200":co.tev>=10000?"border-blue-100":"border-gray-200"} overflow-hidden`}>
                   {/* Summary row */}
                   <div className="px-3 py-2 cursor-pointer hover:bg-gray-50 select-none text-xs" onClick={()=>setExpanded(isOpen?null:co.name)}
-                    style={{display:"grid",gridTemplateColumns:"28px 1fr 68px 76px 54px 60px 44px 96px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
+                    style={{display:"grid",gridTemplateColumns:"28px 1fr 96px 54px 76px 64px 72px 78px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
                     <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600 flex-shrink-0">{rank}</div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1 flex-wrap">
@@ -993,8 +993,8 @@ export default function App(){
                     </div>
                     <div className="text-right font-semibold">{fmt(co.tev)}</div>
                     <div className="text-right font-semibold">{co.ntmRevX}x</div>
-                    <div className="text-right font-semibold">{co.growth}%</div>
                     <div className="text-right font-semibold">{co.ntmEBITDAX}x</div>
+                    <div className="text-right font-semibold">{co.growth}%</div>
                     <div className="text-right font-semibold">{co.ebitda}%</div>
                     <div className={`text-right font-semibold ${irrColor(co.lbo.irr)}`}>{co.lbo.irr}%</div>
                     <div className={`text-right font-semibold ${co.sharePct!==null?(co.sharePct>0?"text-green-700":"text-red-500"):"text-gray-300"}`}>
