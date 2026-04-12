@@ -825,27 +825,25 @@ export default function App(){
                                 {(()=>{
                                   const nd=co.sd?.netDebt??0,eqV=co.dcf.intrinsic-nd,shr=co.sd?.sharesOut,dcfShr=shr?(eqV/shr).toFixed(2):null,curP=co.sd?.sharePrice,prem=dcfShr&&curP?Math.round((dcfShr/curP-1)*100):null;
                                   return [
-                                    ["NPV of UFCFs (2026–2035)","",fmt(co.dcf.pvSum),false,false],
+                                    ["Terminal Value Calculation","","",true,false,false,undefined,true],
+                                    [`Terminal Year UFCF (2035) × (1 + PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`${fmtM(co.dcf.lastUFCF)} × ${(1+co.dcf.pgr).toFixed(3)}`,`$${fmtM(co.dcf.tvUFCF)}`,false,false],
+                                    [`÷ (WACC ${Math.round(co.dcf.wacc*1000)/10}% – PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`÷ ${Math.round((co.dcf.wacc-co.dcf.pgr)*1000)/10}%`,`$${fmtM(co.dcf.tv)}`,false,false],
+                                    [`Discounted to present (Year ${DCF_YEARS})`,"",`$${fmtM(co.dcf.pvTV)}`,false,false],
                                     ["","","",false,false,true],
-                                    ["Terminal Value Calculation","","",true,false],
-                                    [`Terminal Year UFCF (2035) × (1 + PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`${fmtM(co.dcf.lastUFCF)} × ${(1+co.dcf.pgr).toFixed(3)}`,fmt(co.dcf.tvUFCF),false,false],
-                                    [`÷ (WACC ${Math.round(co.dcf.wacc*1000)/10}% – PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`÷ ${Math.round((co.dcf.wacc-co.dcf.pgr)*1000)/10}%`,fmt(co.dcf.tv),false,false],
-                                    [`Discounted to present (Year ${DCF_YEARS})`,"",fmt(co.dcf.pvTV),false,false],
-                                    ["","","",false,false,true],
-                                    ["NPV of UFCFs","",fmt(co.dcf.pvSum),false,false],
-                                    ["(+) NPV of Terminal Value","",fmt(co.dcf.pvTV),false,false],
-                                    ["DCF Intrinsic TEV","",fmt(co.dcf.intrinsic),true,true],
-                                    ["(–) Net Debt","",fmt(nd),false,false],
-                                    ["DCF Equity Value","",fmt(eqV),true,true],
-                                    [`÷ Shares Outstanding`,"",shr?`${shr}M`:"N/A",false,false],
+                                    ["NPV of UFCFs","",`$${fmtM(co.dcf.pvSum)}`,false,false],
+                                    ["(+) NPV of Terminal Value","",`$${fmtM(co.dcf.pvTV)}`,false,false],
+                                    ["DCF Intrinsic TEV","",`$${fmtM(co.dcf.intrinsic)}`,true,true],
+                                    ["(–) Net Debt","",`$${fmtM(Math.abs(nd))}`,false,false],
+                                    ["DCF Equity Value","",`$${fmtM(eqV)}`,true,true],
+                                    [`÷ Shares Outstanding`,"",shr?`${shr}`:"N/A",false,false],
                                     ["DCF / Share","",dcfShr?`$${dcfShr}`:"N/A",true,true],
                                     ["","","",false,false,true],
                                     ["Current Share Price","",curP?`$${curP}`:"N/A",false,false],
                                     ["Implied Premium / (Discount)","",prem!==null?`${prem>0?"+":""}${prem}%`:"N/A",true,false,false,prem],
-                                  ].map(([label,calc,val,bold,border,spacer,premVal],i)=>(
+                                  ].map(([label,calc,val,bold,border,spacer,premVal,underline],i)=>(
                                     spacer?<tr key={i}><td colSpan={3} className="py-1.5"></td></tr>:
                                     <tr key={i} className={border?"border-t-2 border-black":""}>
-                                      <td className={`pr-6 py-0.5 text-gray-700 whitespace-nowrap ${bold?"font-bold":""}`}>{label}</td>
+                                      <td className={`pr-6 py-0.5 text-gray-700 whitespace-nowrap ${bold?"font-bold":""} ${underline?"underline":""}`}>{label}</td>
                                       <td className="pr-4 py-0.5 text-gray-400 text-right whitespace-nowrap">{calc}</td>
                                       <td className={`py-0.5 text-right font-medium whitespace-nowrap ${bold?"font-bold":""} ${premVal!==undefined?(premVal>0?"text-green-700":"text-red-600"):""}`}>{val}</td>
                                     </tr>
