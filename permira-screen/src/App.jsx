@@ -45,7 +45,9 @@ function runDCF(companyName,growthPct,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
     const nopatMargin=(nopat/rev)*100;
     const otherCFPctRev=(otherCF/rev)*100;
     const ufcf=nopat+da+otherCF;
-    const pv=ufcf/Math.pow(1+wD,yr-0.5);
+    const stubFactor=yr===1?0.5:1; // 2026 stub: 50% credit (as of 6/30/2026)
+    const ufcfForPV=ufcf*stubFactor;
+    const pv=ufcfForPV/Math.pow(1+wD,yr-0.5);
     pvSum+=pv;
     rows.push({yr,label,rev:Math.round(rev),revGrowth:Math.round(revGrowth*10)/10,
       ebitda:Math.round(ebitda),ebitdaMargin:Math.round(ebitdaMargin*10)/10,
@@ -55,7 +57,7 @@ function runDCF(companyName,growthPct,ebitdaPct,endMarginPct,wacc,pgr,ntmRev){
       ebit:Math.round(ebit),ebitMargin:Math.round((ebit/rev)*1000)/10,taxes:Math.round(taxes),taxRate:25,
       nopat:Math.round(nopat),nopatMargin:Math.round(nopatMargin*10)/10,
       otherCF:Math.round(otherCF),otherCFPctRev:Math.round(otherCFPctRev*10)/10,
-      ufcf:Math.round(ufcf),ufcfMargin:Math.round((ufcf/rev)*1000)/10,ufcfConv:Math.round((ufcf/ebitdaPostSBC)*1000)/10,pv:Math.round(pv)});
+      ufcf:Math.round(ufcf),ufcfStub:Math.round(ufcfForPV),stubbed:yr===1,ufcfMargin:Math.round((ufcf/rev)*1000)/10,ufcfConv:Math.round((ufcf/ebitdaPostSBC)*1000)/10,pv:Math.round(pv)});
   }
   const last=rows[DCF_YEARS-1],tvUFCF=last.ufcf*(1+pD),tv=tvUFCF/(wD-pD),pvTV=tv/Math.pow(1+wD,DCF_YEARS-0.5);
   return{rows,pvSum:Math.round(pvSum),tv:Math.round(tv),pvTV:Math.round(pvTV),intrinsic:Math.round(pvSum+pvTV),lastUFCF:last.ufcf,tvUFCF:Math.round(tvUFCF),wacc:wD,pgr:pD};
@@ -355,16 +357,16 @@ const LTM_EBITDA={
   "Flywire":131
 }
 const COMPANY_FINANCIALS={
-  "Veeva Systems":{rev26:3561,rev27:3997,ebitda26:1603,ebitda27:1829,sbc26:527,sbc27:Math.round((527/3561)*3997),da26:26,da27:46,other26:-2,other27:-4},
-  "Bentley Systems":{rev26:1700,rev27:1875,ebitda26:610,ebitda27:693,sbc26:82,sbc27:Math.round((82/1700)*1875),da26:29,da27:29,other26:111,other27:118},
-  "Nemetschek":{rev26:1550,rev27:1768,ebitda26:504,ebitda27:588,sbc26:0,sbc27:0,da26:41,da27:38,other26:89,other27:101},
-  "Waystar":{rev26:1286,rev27:1415,ebitda26:537,ebitda27:594,sbc26:49,sbc27:Math.round((49/1286)*1415),da26:26,da27:28,other26:-11,other27:-16},
-  "AppFolio":{rev26:1113,rev27:1302,ebitda26:319,ebitda27:394,sbc26:83,sbc27:Math.round((83/1113)*1302),da26:22,da27:36,other26:-10,other27:-12},
-  "CCC Intelligent Solutions":{rev26:1153,rev27:1257,ebitda26:481,ebitda27:531,sbc26:191,sbc27:Math.round((191/1153)*1257),da26:62,da27:74,other26:33,other27:35},
-  "Elastic":{rev26:1891,rev27:2153,ebitda26:333,ebitda27:411,sbc26:323,sbc27:Math.round((323/1891)*2153),da26:11,da27:23,other26:-34,other27:-39},
-  "Cellebrite":{rev26:569,rev27:661,ebitda26:152,ebitda27:185,sbc26:54,sbc27:Math.round((54/569)*661),da26:7,da27:10,other26:55,other27:62},
-  "nCino":{rev26:637,rev27:693,ebitda26:159,ebitda27:197,sbc26:79,sbc27:Math.round((79/637)*693),da26:6,da27:9,other26:2,other27:1},
-  "Flywire":{rev26:720,rev27:829,ebitda26:162,ebitda27:201,sbc26:83,sbc27:Math.round((83/720)*829),da26:26,da27:31,other26:33,other27:38}
+  "Veeva Systems":{rev26:3561,rev27:3997,ebitda26:1603,ebitda27:1829,sbc26:527,sbc27:Math.round((527/3561)*3997),da26:26,da27:46,other26:-32,other27:-35},
+  "Bentley Systems":{rev26:1700,rev27:1875,ebitda26:610,ebitda27:693,sbc26:82,sbc27:Math.round((82/1700)*1875),da26:29,da27:29,other26:51,other27:60},
+  "Nemetschek":{rev26:1550,rev27:1768,ebitda26:504,ebitda27:588,sbc26:0,sbc27:0,da26:41,da27:38,other26:53,other27:59},
+  "Waystar":{rev26:1286,rev27:1415,ebitda26:537,ebitda27:594,sbc26:49,sbc27:Math.round((49/1286)*1415),da26:26,da27:28,other26:-83,other27:-87},
+  "AppFolio":{rev26:1113,rev27:1302,ebitda26:319,ebitda27:394,sbc26:83,sbc27:Math.round((83/1113)*1302),da26:22,da27:36,other26:-24,other27:-28},
+  "CCC Intelligent Solutions":{rev26:1153,rev27:1257,ebitda26:481,ebitda27:531,sbc26:191,sbc27:Math.round((191/1153)*1257),da26:62,da27:74,other26:-93,other27:-99},
+  "Elastic":{rev26:1891,rev27:2153,ebitda26:333,ebitda27:411,sbc26:323,sbc27:Math.round((323/1891)*2153),da26:11,da27:23,other26:-44,other27:-49},
+  "Cellebrite":{rev26:569,rev27:661,ebitda26:152,ebitda27:185,sbc26:54,sbc27:Math.round((54/569)*661),da26:7,da27:10,other26:35,other27:42},
+  "nCino":{rev26:637,rev27:693,ebitda26:159,ebitda27:197,sbc26:79,sbc27:Math.round((79/637)*693),da26:6,da27:9,other26:-12,other27:-13},
+  "Flywire":{rev26:720,rev27:829,ebitda26:162,ebitda27:201,sbc26:83,sbc27:Math.round((83/720)*829),da26:26,da27:31,other26:3,other27:4}
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -803,17 +805,18 @@ export default function App(){
                       {/* DCF */}
                       <div>
                         <button onClick={()=>setOpenSec(p=>({...p,[`${co.name}_dcf`]:!p[`${co.name}_dcf`]}))} className="w-full text-left font-semibold text-blue-900 text-xs bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 hover:bg-blue-100">
-                          📈 DCF — Intrinsic: {fmt(co.dcf.intrinsic)} vs TEV {fmt(co.tev)} · DCF/share: {co.dcfShare?`$${co.dcfShare} (${co.sharePct>0?"+":""}${co.sharePct}%) vs $${co.sd?.sharePrice}`:"pending share data"} {openSec[`${co.name}_dcf`]?"▲":"▼"}
+                          📈 DCF (as of 6/30/2026) — Intrinsic: {fmt(co.dcf.intrinsic)} vs TEV {fmt(co.tev)} · DCF/share: {co.dcfShare?`$${co.dcfShare} (${co.sharePct>0?"+":""}${co.sharePct}%) vs $${co.sd?.sharePrice}`:"pending share data"} {openSec[`${co.name}_dcf`]?"▲":"▼"}
                         </button>
                         {openSec[`${co.name}_dcf`]&&(
                           <div className="mt-2 bg-white border border-blue-100 rounded-lg p-3 overflow-x-auto">
-                            <p className="text-xs text-gray-500 mb-3">2026-2027 = consensus actuals (locked). 2028+ growth: {g}%{g>10?` → converges to 10% by 2035 (implied CAGR ~${Math.round(((Math.pow(co.dcf.rows[DCF_YEARS-1].rev/co.dcf.rows[0].rev,1/DCF_YEARS)-1)*100)*10)/10}%)`:""}. EBITDA margin → {eM}%. SBC/D&A/Other held at 2027 % of rev. Tax rate 25%. WACC {gWacc}% · PGR {gPgr}%</p>
+                            <p className="text-xs text-gray-500 mb-3">DCF as of 6/30/2026. 2026 UFCF stubbed at 50% (H2 only). 2026-2027 = consensus actuals (locked). 2028+ growth: {g}%{g>10?` → converges to 10% by 2035 (implied CAGR ~${Math.round(((Math.pow(co.dcf.rows[DCF_YEARS-1].rev/co.dcf.rows[0].rev,1/DCF_YEARS)-1)*100)*10)/10}%)`:""}. EBITDA margin → {eM}%. SBC/D&A/Other held at 2027 % of rev. Tax rate 25%. WACC {gWacc}% · PGR {gPgr}%</p>
                             <p className="text-[10px] text-gray-400 mb-1 italic">All figures in $M unless otherwise noted</p>
                             <table className="w-full text-xs border-collapse min-w-max">
                               <thead><tr><th className="px-2 py-1.5 text-left font-semibold text-gray-600 sticky left-0 bg-white w-36 border-b-2 border-black">Metric</th>{co.dcf.rows.map(r=><th key={r.yr} className="px-2 py-1.5 text-center font-semibold text-gray-600 whitespace-nowrap border-b-2 border-black">{r.label}</th>)}</tr></thead>
                               <tbody>
-                                {[["Revenue",r=>fmtM(r.rev),{bold:true,topBorder:true}],["Rev Growth",r=>r.yr===1?"—":`${r.revGrowth}%`,{italic:true}],["EBITDA",r=>fmtM(r.ebitda),{topBorder:true,bg:true}],["EBITDA Margin",r=>`${r.ebitdaMargin}%`,{italic:true,bg:true}],["(-) SBC",r=>fmtM(r.sbc),{}],["SBC % Rev",r=>`${r.sbcPctRev}%`,{italic:true}],["EBITDA Post-SBC",r=>fmtM(r.ebitdaPostSBC),{bold:true,topBorder:true,bg:true}],["Post-SBC Margin",r=>`${r.ebitdaPostSBCMargin}%`,{italic:true,bg:true}],["(-) D&A",r=>fmtM(r.da),{}],["D&A % Rev",r=>`${r.daPctRev}%`,{italic:true}],["EBIT",r=>fmtM(r.ebit),{topBorder:true,bg:true}],["EBIT Margin",r=>`${r.ebitMargin}%`,{italic:true,bg:true}],["(-) Taxes",r=>fmtM(r.taxes),{}],["Tax Rate",r=>`${r.taxRate}%`,{italic:true}],["NOPAT",r=>fmtM(r.nopat),{topBorder:true,bg:true}],["NOPAT Margin",r=>`${r.nopatMargin}%`,{italic:true,bg:true}],["(+) D&A",r=>fmtM(r.da),{}],["(+/-) Other Cash Flow",r=>fmtM(r.otherCF),{}],["Other % Rev",r=>`${r.otherCFPctRev}%`,{italic:true}],["UFCF",r=>fmtM(r.ufcf),{bold:true,topBorder:true,bg:true}],["UFCF Margin",r=>`${r.ufcfMargin}%`,{italic:true,bg:true}],["UFCF % Conversion",r=>`${r.ufcfConv}%`,{italic:true,bg:true}],["PV of UFCF",r=>fmtM(r.pv),{spacer:true,boxed:true,bold:true}]].map(([lbl,fn,opts])=>(
-                                  <tr key={lbl} className={`${opts.topBorder?"border-t-2 border-black":""} ${opts.bg?"bg-blue-50":""} ${opts.spacer?"border-t-8 border-transparent":""}`}>
+                                {[["Revenue",r=>fmtM(r.rev),{bold:true,topBorder:true}],["Rev Growth",r=>r.yr===1?"—":`${r.revGrowth}%`,{italic:true}],["EBITDA",r=>fmtM(r.ebitda),{topBorder:true,bg:true}],["EBITDA Margin",r=>`${r.ebitdaMargin}%`,{italic:true,bg:true}],["(-) SBC",r=>fmtM(r.sbc),{}],["SBC % Rev",r=>`${r.sbcPctRev}%`,{italic:true}],["EBITDA Post-SBC",r=>fmtM(r.ebitdaPostSBC),{bold:true,topBorder:true,bg:true}],["Post-SBC Margin",r=>`${r.ebitdaPostSBCMargin}%`,{italic:true,bg:true}],["(-) D&A",r=>fmtM(r.da),{}],["D&A % Rev",r=>`${r.daPctRev}%`,{italic:true}],["EBIT",r=>fmtM(r.ebit),{topBorder:true,bg:true}],["EBIT Margin",r=>`${r.ebitMargin}%`,{italic:true,bg:true}],["(-) Taxes",r=>fmtM(r.taxes),{}],["Tax Rate",r=>`${r.taxRate}%`,{italic:true}],["NOPAT",r=>fmtM(r.nopat),{topBorder:true,bg:true}],["NOPAT Margin",r=>`${r.nopatMargin}%`,{italic:true,bg:true}],["(+) D&A",r=>fmtM(r.da),{}],["(+/-) Other Cash Flow",r=>fmtM(r.otherCF),{}],["Other % Rev",r=>`${r.otherCFPctRev}%`,{italic:true}],["UFCF",r=>fmtM(r.ufcf),{bold:true,topBorder:true,bg:true}],["UFCF Margin",r=>`${r.ufcfMargin}%`,{italic:true,bg:true}],["UFCF % Conversion",r=>`${r.ufcfConv}%`,{italic:true,bg:true}],["Stub UFCF (H2 2026 = 50%)",r=>r.stubbed?fmtM(r.ufcfStub):fmtM(r.ufcf),{italic:true,bg:true}],["_spacer",null,{isSpacer:true}],["PV of UFCF",r=>fmtM(r.pv),{boxed:true,bold:true}]].map(([lbl,fn,opts])=>(
+                                  opts.isSpacer?<tr key={lbl}><td colSpan={co.dcf.rows.length+1} className="py-1.5"></td></tr>:
+                                  <tr key={lbl} className={`${opts.topBorder?"border-t-2 border-black":""} ${opts.bg?"bg-blue-50":""}`}>
                                     <td className={`px-2 py-1 text-gray-700 sticky left-0 whitespace-nowrap ${opts.bold?"font-bold":""} ${opts.italic?"italic text-gray-400":"font-medium"} ${opts.blue?"text-blue-700":""} ${opts.bg?"bg-blue-50":"bg-white"}`} style={opts.boxed?{borderTop:"2px solid black",borderBottom:"2px solid black",borderLeft:"2px solid black"}:{}}>{lbl}</td>
                                     {co.dcf.rows.map((r,ri)=><td key={r.yr} className={`px-2 py-1 text-center ${opts.bold?"font-bold":""} ${opts.italic?"italic text-gray-400":""} ${opts.blue?"text-blue-700 font-medium":""}`} style={opts.boxed?{borderTop:"2px solid black",borderBottom:"2px solid black",...(ri===co.dcf.rows.length-1?{borderRight:"2px solid black"}:{})}:{}}>{fn(r)}</td>)}
                                   </tr>
