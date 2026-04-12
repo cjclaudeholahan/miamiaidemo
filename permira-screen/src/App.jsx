@@ -826,8 +826,8 @@ export default function App(){
                                   const nd=co.sd?.netDebt??0,eqV=co.dcf.intrinsic-nd,shr=co.sd?.sharesOut,dcfShr=shr?(eqV/shr).toFixed(2):null,curP=co.sd?.sharePrice,prem=dcfShr&&curP?Math.round((dcfShr/curP-1)*100):null;
                                   return [
                                     ["Terminal Value Calculation","","",true,false,false,undefined,true],
-                                    [`Terminal Year UFCF (2035) × (1 + PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`${fmtM(co.dcf.lastUFCF)} × ${(1+co.dcf.pgr).toFixed(3)}`,`$${fmtM(co.dcf.tvUFCF)}`,false,false],
-                                    [`÷ (WACC ${Math.round(co.dcf.wacc*1000)/10}% – PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,`÷ ${Math.round((co.dcf.wacc-co.dcf.pgr)*1000)/10}%`,`$${fmtM(co.dcf.tv)}`,false,false],
+                                    [`Terminal Year UFCF (2035) × (1 + PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,"",`$${fmtM(co.dcf.tvUFCF)}`,false,false],
+                                    [`÷ (WACC ${Math.round(co.dcf.wacc*1000)/10}% – PGR ${Math.round(co.dcf.pgr*1000)/10}%)`,"",`$${fmtM(co.dcf.tv)}`,false,false],
                                     [`Discounted to present (Year ${DCF_YEARS})`,"",`$${fmtM(co.dcf.pvTV)}`,false,false],
                                     ["","","",false,false,true],
                                     ["NPV of UFCFs","",`$${fmtM(co.dcf.pvSum)}`,false,false],
