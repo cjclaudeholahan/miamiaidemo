@@ -715,7 +715,7 @@ export default function App(){
   if(!authed)return(
     <div className="bg-gray-50 min-h-screen font-sans text-sm flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-lg p-8 w-80">
-        <h1 className="text-xl font-bold text-gray-900 mb-1">Vertical Software Screen</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-1">Miami Offsite Demo — Take-Private Screen</h1>
         <p className="text-xs text-gray-500 mb-6">Permira · Enter password to continue</p>
         <form onSubmit={e=>{e.preventDefault();if(pw==="vsaas")setAuthed(true);else{setPw("");alert("Incorrect password");}}} className="space-y-4">
           <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Password" autoFocus className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"/>
@@ -728,7 +728,7 @@ export default function App(){
     <div className="bg-gray-50 min-h-screen font-sans text-sm">
     <div className="max-w-6xl mx-auto p-4">
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-gray-900">Vertical Software Take-Private Screen</h1>
+        <h1 className="text-xl font-bold text-gray-900">Miami Offsite Demo — Take-Private Screen</h1>
         <p className="text-xs text-gray-500 mt-0.5">Permira · {companies.length} companies · Data as of 2/27/2026</p>
       </div>
       {/* Tabs */}
@@ -954,10 +954,10 @@ export default function App(){
           <div className="bg-white border border-gray-200 rounded-lg mb-1 px-3 py-1.5 text-xs text-gray-400 font-medium" style={{display:"grid",gridTemplateColumns:"28px 1fr 68px 76px 54px 60px 44px 96px 128px 78px 50px 46px 56px 16px",gap:"0 8px",alignItems:"center"}}>
             <div></div><div>Company</div>
             <div className="text-right">TEV</div>
-            <div className="text-right">EV/EBITDA</div>
             <div className="text-right">EV/Rev</div>
+            <div className="text-right">Growth</div>
+            <div className="text-right">EV/EBITDA</div>
             <div className="text-right">EBITDA%</div>
-            <div className="text-right">Gr%</div>
             <div className="text-right">IRR</div>
             <div className="text-right">DCF/Share <span className="text-red-500 font-bold" title="Does not incorporate stock-based compensation">ex-SBC</span></div>
             <div className="text-center">AI Risk</div>
@@ -992,10 +992,10 @@ export default function App(){
                       <div className="text-gray-400 truncate">{co.vertical}</div>
                     </div>
                     <div className="text-right font-semibold">{fmt(co.tev)}</div>
-                    <div className="text-right font-semibold">{co.ntmEBITDAX}x</div>
                     <div className="text-right font-semibold">{co.ntmRevX}x</div>
-                    <div className="text-right font-semibold">{co.ebitda}%</div>
                     <div className="text-right font-semibold">{co.growth}%</div>
+                    <div className="text-right font-semibold">{co.ntmEBITDAX}x</div>
+                    <div className="text-right font-semibold">{co.ebitda}%</div>
                     <div className={`text-right font-semibold ${irrColor(co.lbo.irr)}`}>{co.lbo.irr}%</div>
                     <div className={`text-right font-semibold ${co.sharePct!==null?(co.sharePct>0?"text-green-700":"text-red-500"):"text-gray-300"}`}>
                       {co.sd?co.dcfShare!==null?`$${co.dcfShare} (${co.sharePct>0?"+":""}${co.sharePct}%)`:"—":"—"}</div>
