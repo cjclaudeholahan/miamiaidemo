@@ -18,7 +18,7 @@ function runDCF(companyName,cagrPct,g2027Rate,baseCAGR,ebitdaPct,endMarginPct,wa
   // 2026-2027 = consensus (locked). 2028+ = linear convergence from 2027 growth toward 10% (high-growth cos) or flat at 2027 rate (sub-10% cos), shifted by CAGR delta.
   const delta=(cagrPct-baseCAGR)/100;
   const tG=Math.min(g2027Rate,0.10);
-  const dcfGrowth=(yr)=>g2027Rate+(tG-g2027Rate)*((yr-3)/7)+delta;
+  const dcfGrowth=(yr)=>g2027Rate+(tG-g2027Rate)*((yr-2)/(DCF_YEARS-2))+delta;
   let prevRev=fin?fin.rev27:ntmRev;
   for(let yr=1;yr<=DCF_YEARS;yr++){
     const label=String(2025+yr);
@@ -88,7 +88,7 @@ function runLBO(ntmRev,ntmRevX,ebitdaPct,growthPct,endMarginPct,exitMultOverride
   const y2Margin=fin?(fin.ebitda27/fin.rev27):startM;
   const delta=(growthPct-baseCAGR)/100;
   const tGl=Math.min(g2027Rate,0.10);
-  const dcfGrowth=(yr)=>g2027Rate+(tGl-g2027Rate)*((yr-3)/7)+delta;
+  const dcfGrowth=(yr)=>g2027Rate+(tGl-g2027Rate)*((yr-2)/(DCF_YEARS-2))+delta;
   const entryEBITDA=fin&&fin.ebitda26&&fin.ebitda27?(fin.ebitda26*0.5+fin.ebitda27*0.5):(ntmRev*startM);
   const levEBITDA=fin&&fin.ebitda25&&fin.ebitda26?(fin.ebitda25*0.5+fin.ebitda26*0.5):(ltmEBITDAOv??entryEBITDA);
   const entryTEV=entryTEVOverride??(ntmRev*ntmRevX*LBO_PREM);
@@ -162,7 +162,7 @@ const RAW=[
    sd:{sharePrice:35.08,sharesOut:306.3,marketCap:10745.1,netDebt:1097.8},
    thesis:["Moat is not just 'infrastructure SoR' — it is the accumulated library of engineering standards, simulation templates, and project data inside each client's Bentley environment; switching means re-certifying years of design models against AASHTO/Eurocode standards","Bentley family controls ~55% of voting power via dual-class structure, making hostile take-private impossible — any negotiated deal pays a governance premium on top of 7.8x NTM Rev, and the family has shown no urgency to sell","Real competitive risk is Hexagon acquiring Bricsys + Iesve to build a vertically-integrated civil/energy design stack; Autodesk Infraworks remains subscale but could bundle aggressively against Bentley's standalone pricing","At B TEV the realistic exit is strategic to Siemens, Dassault, or Hexagon — financial sponsor returns depend on multiple expansion from current trough, not operational improvement on already-36% EBITDA margins","Weakness: E365 subscription transition flatters NRR metrics; underlying seat growth in civil infrastructure is mid-single-digit at best, and the customer base (DOTs, utilities, public agencies) is inherently cyclical with government budget exposure"],
    aiRationale:["Protected workflows: finite element analysis, hydraulic simulation, geotechnical modeling — these require physics engines and regulatory certification (e.g., PE stamp requirements) that generative AI does not address","Threatened workflow: 2D drafting and basic alignment design within OpenRoads/OpenRail could see 40-60% productivity gains from AI copilots, compressing seats at smaller engineering firms within 3-5 years","Second-order risk: if AI makes a 10-person civil engineering team as productive as 15, Bentley's seat-based pricing directly loses 33% of revenue per firm — usage-based repricing on iTwin is the obvious hedge but adoption is nascent","Specific AI competitors: Autodesk's AI-assisted InfraWorks, Trimble's AI-enabled Tekla for structural, and startups like Cala (generative building design) and TestFit (generative site planning) are encroaching on adjacent workflows","3-year view: minimal impact on core simulation/analysis revenue; 10-year view: material seat compression risk in design-phase workflows, partially offset only if Bentley successfully shifts to consumption-based iTwin pricing at scale"]},
-  {name:"Nemetschek",vertical:"Construction & Design SW",bucket:"Pure-Play VSaaS",hq:"DE",sor:true,seat:false,pricing:"Usage-Based",peOwned:false,tev:9660.0,ntmRev:1659.4,ntmEBITDA:544.7,growth:13,gm:97,ebitda:33,cagr:13.44,ntmRevX:5.82,peFit:"Medium-High",aiRisk:"Low",avoid:false,ltmEbitda:463.1,pct52w:0.503,
+  {hidden:true,name:"Nemetschek",vertical:"Construction & Design SW",bucket:"Pure-Play VSaaS",hq:"DE",sor:true,seat:false,pricing:"Usage-Based",peOwned:false,tev:9660.0,ntmRev:1659.4,ntmEBITDA:544.7,growth:13,gm:97,ebitda:33,cagr:13.44,ntmRevX:5.82,peFit:"Medium-High",aiRisk:"Low",avoid:false,ltmEbitda:463.1,pct52w:0.503,
    desc:"Portfolio of AEC software brands (Allplan, Vectorworks, Bluebeam, dRofus) covering architecture, engineering, and construction design workflows. Particularly dominant across European markets with near-100% gross margins reflecting pure software delivery. Usage-based subscription with revenue tied to project activity.",
    sd:{sharePrice:81.81,sharesOut:116.28,marketCap:9513.1,netDebt:146.9},
    thesis:["Nemetschek is a holding company of semi-autonomous brands (Allplan, Vectorworks, Bluebeam, Graphisoft) with separate codebases, sales teams, and product roadmaps — a PE buyer's operational thesis must center on consolidating this fragmented portfolio, which prior management has resisted","The actual moat varies dramatically by brand: Bluebeam owns PDF markup for construction (near-monopoly), Graphisoft's ArchiCAD is the #2 BIM tool behind Revit, but Allplan is a distant third in structural — a buyer is really underwriting Bluebeam's dominance and ArchiCAD's European installed base","5.8x NTM Rev at 50% off highs is the most attractive entry multiple for a 97% GM business in the screen — but Nemetschek is German-listed with a concentrated shareholder base (Nemetschek family foundation holds ~52%), making take-private governance complex and requiring German takeover law compliance","Consolidation upside is the real prize: unifying Allplan, Vectorworks, and Graphisoft onto a shared platform could unlock 500-800bps of EBITDA improvement from eliminating duplicate R&D and go-to-market — but execution risk is high given brand loyalty and cultural resistance across subsidiaries","Weakness: Autodesk's AEC Collection bundles Revit + Civil 3D + Navisworks at aggressive pricing; Nemetschek's individual brands cannot match this bundling power, and Autodesk's 2024 Forma launch directly targets the generative design space where Nemetschek is underinvested"],
@@ -170,7 +170,7 @@ const RAW=[
   {name:"Waystar",vertical:"Healthcare",bucket:"Pure-Play VSaaS",hq:"US",sor:false,seat:false,pricing:"Usage-Based",peOwned:false,tev:6535,ntmRev:1328,ntmEBITDA:555.1,growth:17,gm:69,ebitda:42,cagr:14,ntmRevX:4.92,peFit:"High",aiRisk:"Low",avoid:false,ltmEbitda:486,pct52w:0.627,
    desc:"Revenue cycle management (RCM) platform automating claims submission, eligibility verification, and payment posting for healthcare providers. Mission-critical workflow embedded across hospitals and physician groups with multi-year contracts and extreme switching costs. Usage-based fees on claims processed, creating revenue tied to patient visit volumes.",
    sd:{sharePrice:25.80,sharesOut:200.1,marketCap:5164,netDebt:1371},
-   thesis:["Post-EQT/CPPIB take-private at .75 and re-IPO at .50, Waystar trades at 4.7x NTM with 42% EBITDA — a secondary buyout repricing the same asset EQT bought from Bain","Real moat is payer connectivity: Waystar processes claims across 1,500+ payers with individually negotiated EDI connections — recreating this integration layer is a 5-7 year effort, not a technology problem","Usage-based on claims volume means revenue scales with healthcare utilization inflation (~5-6% annually) independent of customer headcount decisions","Kill-the-deal risk: R1 RCM (now private under TowerBrook/CD&R) is consolidating end-to-end RCM with physician staffing, creating a bundled competitor Waystar cannot match as pure software","Exit path narrows post-EQT: strategic buyers (UHG/Optum, Change Healthcare) face antitrust issues, leaving you selling to another sponsor at cycle-peak healthcare multiples"],
+   thesis:["Post-EQT/CPPIB take-private and subsequent IPO, Waystar trades at 4.9x NTM with 42% EBITDA — a rare opportunity to acquire the mission-critical healthcare payments SoR at trough public market pricing","Real moat is payer connectivity: Waystar processes claims across 1,500+ payers with individually negotiated EDI connections — recreating this integration layer is a 5-7 year effort, not a technology problem","Usage-based on claims volume means revenue scales with healthcare utilization inflation (~5-6% annually) independent of customer headcount decisions","Kill-the-deal risk: R1 RCM (now private under TowerBrook/CD&R) is consolidating end-to-end RCM with physician staffing, creating a bundled competitor Waystar cannot match as pure software","Exit path: strategic buyers (UHG/Optum, Change Healthcare) face antitrust headwinds — a return to public markets as a standalone healthcare technology leader is the natural path given Waystar's scale, brand recognition, and recurring revenue profile"],
    aiRationale:["AI actually strengthens Waystar near-term: automated prior authorization, denial prediction, and coding suggestions are features Waystar sells, not threats to its position","Real AI risk is indirect — if AI coding tools (Codify, Nym Health) achieve >95% first-pass clean claim rates, Waystar's denial management and appeals workflow becomes less critical","The payer-provider data exchange layer is regulatory infrastructure, not intelligence — AI cannot displace the EDI/X12 transaction backbone Waystar operates on","Ambient clinical documentation (Nuance DAX, Abridge) could reduce coding errors upstream, shrinking the denial-and-rework volume that drives ~30% of RCM platform value","Net assessment: AI is a product tailwind for 3-5 years but the long-term risk is that cleaner upstream data reduces the complexity that justifies RCM platform pricing"]},
   {hidden:true,name:"AppFolio",vertical:"Real Estate / Prop Tech",bucket:"Pure-Play VSaaS",hq:"US",sor:true,seat:false,pricing:"Usage-Based",peOwned:false,tev:5531,ntmRev:1160,growth:17,gm:64,ebitda:29,cagr:17,ntmRevX:4.8,peFit:"High",aiRisk:"Low",avoid:false,ltmEbitda:265,pct52w:0.49,
    desc:"Property management software for residential and commercial real estate operators covering leasing, maintenance, accounting, screening, and payments. The SoR for SMB property managers with a payments flywheel that grows as portfolios scale. Usage-based model with fees tied to units under management and payment volumes.",
@@ -278,10 +278,10 @@ const RAW=[
    sd:{sharePrice:29.06,sharesOut:188.2,marketCap:5469,netDebt:0},
    thesis:["Avoid: negative UFCF ($-43M in 2026) despite 16% EBITDA margins reflects significant capex intensity and FCF conversion well below the level required for a viable LBO","7.5x NTM for a CDN business with negative free cash flow and 14% growth is a premium valuation for a company losing competitive position to Cloudflare (which offers similar edge capabilities plus security)","Cloudflare's Supercloud strategy is an existential threat — Cloudflare's network (320+ cities vs. Fastly's 70+) combined with zero-trust security, R2 storage, and Workers serverless creates a full-stack platform Fastly cannot match","The positive case: significant M&A consolidation value — Fastly's developer adoption and real-time CDN architecture could attract Akamai or a cloud provider, but this is a sale thesis not an operational thesis"],
    aiRationale:["Edge computing and CDN are being commoditized by AWS CloudFront, Cloudflare Workers, and Vercel Edge — Fastly's technical differentiation is narrowing as hyperscalers invest in edge infrastructure","Cloudflare's AI Gateway and AI inference at the edge (Cloudflare Workers AI) is a competitive threat to Fastly's edge compute use cases as AI inference shifts to the network edge","Fastly's Compute@Edge serverless platform positions it for AI inference workloads — this is the most defensible long-term growth vector if customers choose Fastly's edge for latency-sensitive AI applications","High risk: CDN is commoditizing, FCF is negative, and Cloudflare is executing a platform strategy that Fastly cannot match — avoid"]},
-  {hidden:true,name:"JFrog",vertical:"DevOps & MLOps",bucket:"Pure-Play VSaaS",hq:"US",sor:false,seat:false,pricing:"Usage-Based",peOwned:false,tev:5451,ntmRev:652,growth:18,gm:83,ebitda:19,cagr:17.0,ntmRevX:8.37,peFit:"Medium",aiRisk:"Medium",avoid:false,ltmEbitda:101,pct52w:0.68,
+  {name:"JFrog",vertical:"DevOps & MLOps",bucket:"Pure-Play VSaaS",hq:"US",sor:false,seat:false,pricing:"Usage-Based",peOwned:false,tev:5150.3,ntmRev:658.1,ntmEBITDA:127.6,growth:17,gm:83,ebitda:19,cagr:17.0,ntmRevX:7.83,peFit:"Medium",aiRisk:"Medium",avoid:false,ltmEbitda:102,pct52w:0.640,
    desc:"Universal artifact management platform (Artifactory) providing binary repository management, software supply chain security, and MLOps capabilities — the SoR for software artifact lifecycle management in enterprise DevOps workflows.",
-   sd:{sharePrice:46.93,sharesOut:131.2,marketCap:6156,netDebt:-705},
-   thesis:["JFrog Artifactory is the default binary repository for enterprise DevOps — every software release pipeline stores build artifacts in Artifactory, creating a central dependency that is deeply embedded in CI/CD infrastructure","8.4x NTM appears expensive until you recognize JFrog's position at the center of software supply chain security — post-SolarWinds and Log4Shell, artifact integrity verification and software composition analysis are mandatory enterprise compliance requirements","MLflow + JFrog Catalog positions the platform for ML model versioning and registry — the same artifact management patterns that work for software packages apply to ML models, expanding TAM without new sales motions","18% growth with 83% GM and 19% EBITDA — the margin expansion story is compelling as enterprise contracts shift from perpetual to SaaS subscription, improving ARPU and predictability"],
+   sd:{sharePrice:44.12,sharesOut:132.7,marketCap:5855.4,netDebt:-705.1},
+   thesis:["JFrog Artifactory is the default binary repository for enterprise DevOps — every software release pipeline stores build artifacts in Artifactory, creating a central dependency that is deeply embedded in CI/CD infrastructure","7.8x NTM appears expensive until you recognize JFrog's position at the center of software supply chain security — post-SolarWinds and Log4Shell, artifact integrity verification and software composition analysis are mandatory enterprise compliance requirements","MLflow + JFrog Catalog positions the platform for ML model versioning and registry — the same artifact management patterns that work for software packages apply to ML models, expanding TAM without new sales motions","17% growth with 83% GM and 19% EBITDA — the margin expansion story is compelling as enterprise contracts shift from perpetual to SaaS subscription, improving ARPU and predictability"],
    aiRationale:["Software supply chain security is an AI-amplified concern — AI-generated code that includes unverified packages creates demand for JFrog's Xray (composition analysis) and binary scanning capabilities","The risk is GitHub Advanced Security and Dependabot expanding into binary artifact security — Microsoft's distribution advantage could narrow JFrog's differentiation in the $10B+ DevSecOps market","AI model deployment introduces a new artifact type (ML models) that requires the same versioning, scanning, and lifecycle management as software packages — JFrog's ML model registry is positioned for this growing use case","Medium risk: JFrog's core position is well-defended but the platform must successfully expand into ML model management before a purpose-built MLOps vendor (MLflow, Weights & Biases) commoditizes artifact management for AI"]},
   {hidden:true,name:"Klaviyo",vertical:"Marketing Automation",bucket:"Pure-Play VSaaS",hq:"US",sor:false,seat:false,pricing:"Usage-Based",peOwned:false,tev:5233,ntmRev:1580,growth:22,gm:75,ebitda:16,cagr:20.8,ntmRevX:3.31,peFit:"High",aiRisk:"Medium",avoid:false,ltmEbitda:203,pct52w:0.52,
    desc:"Email and SMS marketing platform purpose-built for ecommerce brands — integrates deeply with Shopify, WooCommerce, and Magento to enable data-driven customer segmentation and automated revenue attribution.",
@@ -489,7 +489,7 @@ const TOP5_DATA={
       {growthDelta:-2,marginDelta:-2,exitFactor:0.8,reasons:[
         "Autonomous vehicle ADAS safety features reduce accident frequency in the outer hold years — progressive decline in claims volume offsets per-claim value growth",
         "Insurance carrier consolidation (e.g., Allstate/Farmers merger scenario) strengthens buyer power in CCC contract negotiations, compressing per-transaction pricing",
-        "Broader software multiple compression at exit — PE-to-PE secondary transaction at a lower EV/EBITDA than entry as macro rates stay elevated"
+        "Broader software multiple compression at exit — strategic buyers face antitrust overlap, making IPO the primary path at potentially compressed multiples if rates stay elevated"
       ]},
       {growthDelta:0,marginDelta:0,exitFactor:1.0,reasons:[
         "Consistent with 10% N3Y CAGR; auto claims frequency stable as ADAS reduces accidents but increasing vehicle complexity raises severity per claim",
@@ -668,7 +668,7 @@ const LTM_EBITDA={
   "Paylocity":616,
   "AppFolio":265,
   "Fastly":86,
-  "JFrog":101,
+  "JFrog":102,
   "Klaviyo":203,
   "Wix.com":395,
   "CCC Intelligent Solutions":450.6,
@@ -760,13 +760,13 @@ export default function App(){
     const ov=getOv(co.name);
     const fin=COMPANY_FINANCIALS[co.name];
     // Terminal margin = 2027 consensus (stay flat after forecast period); fallback to NTM ebitda for companies without fin data
-    const defEndM=fin&&fin.ebitda27&&fin.rev27?Math.round((fin.ebitda27/fin.rev27)*1000)/10:Math.max(co.ebitda,Math.min(co.ebitda+10,40));
+    const defEndM=fin&&fin.ebitda27&&fin.rev27?(()=>{const m=Math.round((fin.ebitda27/fin.rev27)*1000)/10;return m>=40?m:Math.min(m+10,40);})():Math.max(co.ebitda,Math.min(co.ebitda+10,40));
     // Compute 2027 consensus growth rate and default CAGR from convergence model (high-growth → 10%; sub-10% stays flat)
     const oldStartG=fin&&fin.rev25?Math.round((fin.rev26/fin.rev25-1)*1000)/10:co.growth;
     const g2027Rate=fin?(fin.rev27/fin.rev26-1):(oldStartG/100);
     let simRev=fin?fin.rev27:(co.ntmRev*(1+g2027Rate));
     const terminalG=Math.min(g2027Rate,0.10);
-    for(let yr=3;yr<=DCF_YEARS;yr++){simRev*=(1+(g2027Rate+(terminalG-g2027Rate)*((yr-3)/7)));}
+    for(let yr=3;yr<=DCF_YEARS;yr++){simRev*=(1+(g2027Rate+(terminalG-g2027Rate)*((yr-2)/(DCF_YEARS-2))));}
     const rev2026=fin?fin.rev26:co.ntmRev;
     const defCAGR=Math.round((Math.pow(simRev/rev2026,1/(DCF_YEARS-1))-1)*1000)/10;
     const g=ov.growth??defCAGR;
@@ -840,7 +840,7 @@ export default function App(){
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-blue-100 p-4 text-xs space-y-1.5">
               <p className="font-bold text-blue-900 mb-2">📈 DCF Assumptions</p>
-              {[["Period","10 years"],["Yr 1","NTM actuals (locked — revenue and EBITDA margin)"],["Growth","Yr 1 = NTM rate; if >10%, linearly converges to 10% by Yr 10"],["Margin expansion","Linear Yr 2→Yr 10 from NTM margin to end-state (no contraction)"],["End-state margin","NTM+10% up to 40% cap (per-company override available)"],["FCF conversion","EBITDA × 85%"],["WACC",`${gWacc}% (global toggle)`],["PGR",`${gPgr}% (global toggle)`],["Terminal value","Gordon Growth on terminal FCF"],["DCF vs share price","Equity value = Intrinsic TEV − Net Debt ÷ Shares Out"]].map(([k,v])=>(
+              {[["Period","10 years"],["Yr 1","NTM actuals (locked — revenue and EBITDA margin)"],["Growth","2026-2027 locked to consensus. 2028+: >10% growers converge linearly to 10% by 2035; ≤10% growers stay flat at 2027 rate"],["Margin expansion","Linear Yr 2→Yr 10 from 2027 consensus margin to end-state"],["End-state margin","2027 consensus +10pp, capped at 40%. Companies with ≥40% 2027 EBITDA margin stay flat (per-company override available)"],["FCF conversion","EBITDA × 85%"],["WACC",`${gWacc}% (global toggle)`],["PGR",`${gPgr}% (global toggle)`],["Terminal value","Gordon Growth on terminal FCF"],["DCF vs share price","Equity value = Intrinsic TEV − Net Debt ÷ Shares Out"]].map(([k,v])=>(
                 <div key={k} className="flex gap-2 pb-1 border-b border-gray-100"><span className="text-gray-400 w-40 flex-shrink-0">{k}</span><span className="font-medium text-gray-800">{v}</span></div>
               ))}
             </div>
@@ -885,7 +885,8 @@ export default function App(){
           </div>
           {companies.filter(c=>!c.avoid).slice(0,5).map((co,idx)=>{
             const d=TOP5_DATA[co.name]||{};
-            const defEndM=Math.max(co.ebitda,Math.min(co.ebitda+10,40));
+            const fin5=COMPANY_FINANCIALS[co.name];
+            const defEndM=fin5&&fin5.ebitda27&&fin5.rev27?(()=>{const m=Math.round((fin5.ebitda27/fin5.rev27)*1000)/10;return m>=40?m:Math.min(m+10,40);})():Math.max(co.ebitda,Math.min(co.ebitda+10,40));
             const entryTEV=lboEntryTEV(co.sd,co.ntmRev,co.ntmRevX);
             const entryMult=Math.min(entryTEV/(co.ntmRev*co.ebitda/100),LBO_MAX_EXIT);
             const scenarioCfgs=d.scenarios||[
@@ -926,7 +927,7 @@ export default function App(){
                       </div>
                       <div className="flex gap-3 mt-1 text-xs text-purple-200 flex-wrap">
                         <span>TEV {fmt(co.tev)}</span>
-                        <span>{co.ntmRevX}× NTM Rev</span>
+                        <span>{Math.round(co.ntmRevX*10)/10}× NTM Rev</span>
                         <span>{co.ebitda}% EBITDA</span>
                         <span>{co.growth}% growth</span>
                         <span>N3Y CAGR {co.cagr}%</span>
@@ -1084,7 +1085,7 @@ export default function App(){
                       <div className="text-gray-400">{co.vertical}</div>
                     </div>
                     <div className="text-right font-semibold">{fmt(co.tev)}</div>
-                    <div className="text-right font-semibold">{co.ntmRevX}x</div>
+                    <div className="text-right font-semibold">{Math.round(co.ntmRevX*10)/10}x</div>
                     <div className="text-right font-semibold">{co.ntmEBITDAX}x</div>
                     <div className="text-right font-semibold">{co.growth}%</div>
                     <div className="text-right font-semibold">{co.ebitda}%</div>
