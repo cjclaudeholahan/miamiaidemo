@@ -1058,7 +1058,7 @@ export default function App(){
           </div>
           <div className="space-y-1">
             {filtered.map(co=>{
-              const rank=companies.indexOf(co)+1;
+              const rank=filtered.indexOf(co)+1;
               const isOpen=expanded===co.name;
               const ov=getOv(co.name);
               const defEndM=Math.max(co.ebitda,Math.min(co.ebitda+10,40));
