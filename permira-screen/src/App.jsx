@@ -759,8 +759,8 @@ export default function App(){
   const companies=RAW.map(co=>{
     const ov=getOv(co.name);
     const fin=COMPANY_FINANCIALS[co.name];
-    // Terminal margin = 2027 consensus (stay flat after forecast period); fallback to NTM ebitda for companies without fin data
-    const defEndM=fin&&fin.ebitda27&&fin.rev27?(()=>{const m=Math.round((fin.ebitda27/fin.rev27)*1000)/10;return m>=40?m:Math.min(m+10,40);})():Math.max(co.ebitda,Math.min(co.ebitda+10,40));
+    // Terminal margin = 2025A + 10pp capped at 40%; ≥40% stays flat; fallback to NTM ebitda for companies without fin data
+    const defEndM=fin&&fin.ebitda25&&fin.rev25?(()=>{const m=Math.round((fin.ebitda25/fin.rev25)*1000)/10;return m>=40?m:Math.min(m+10,40);})():Math.max(co.ebitda,Math.min(co.ebitda+10,40));
     // Compute 2027 consensus growth rate and default CAGR from convergence model (high-growth → 10%; sub-10% stays flat)
     const oldStartG=fin&&fin.rev25?Math.round((fin.rev26/fin.rev25-1)*1000)/10:co.growth;
     const g2027Rate=fin?(fin.rev27/fin.rev26-1):(oldStartG/100);
@@ -840,7 +840,7 @@ export default function App(){
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-blue-100 p-4 text-xs space-y-1.5">
               <p className="font-bold text-blue-900 mb-2">📈 DCF Assumptions</p>
-              {[["Period","10 years"],["Yr 1","NTM actuals (locked — revenue and EBITDA margin)"],["Growth","2026-2027 locked to consensus. 2028+: >10% growers converge linearly to 10% by 2035; ≤10% growers stay flat at 2027 rate"],["Margin expansion","Linear Yr 2→Yr 10 from 2027 consensus margin to end-state"],["End-state margin","2027 consensus +10pp, capped at 40%. Companies with ≥40% 2027 EBITDA margin stay flat (per-company override available)"],["FCF conversion","EBITDA × 85%"],["WACC",`${gWacc}% (global toggle)`],["PGR",`${gPgr}% (global toggle)`],["Terminal value","Gordon Growth on terminal FCF"],["DCF vs share price","Equity value = Intrinsic TEV − Net Debt ÷ Shares Out"]].map(([k,v])=>(
+              {[["Period","10 years"],["Yr 1","NTM actuals (locked — revenue and EBITDA margin)"],["Growth","2026-2027 locked to consensus. 2028+: >10% growers converge linearly to 10% by 2035; ≤10% growers stay flat at 2027 rate"],["Margin expansion","Linear Yr 2→Yr 10 from 2027 consensus margin to end-state"],["End-state margin","2025A +10pp, capped at 40%. Companies with ≥40% 2025A EBITDA margin stay flat (per-company override available)"],["FCF conversion","EBITDA × 85%"],["WACC",`${gWacc}% (global toggle)`],["PGR",`${gPgr}% (global toggle)`],["Terminal value","Gordon Growth on terminal FCF"],["DCF vs share price","Equity value = Intrinsic TEV − Net Debt ÷ Shares Out"]].map(([k,v])=>(
                 <div key={k} className="flex gap-2 pb-1 border-b border-gray-100"><span className="text-gray-400 w-40 flex-shrink-0">{k}</span><span className="font-medium text-gray-800">{v}</span></div>
               ))}
             </div>
@@ -886,7 +886,7 @@ export default function App(){
           {companies.filter(c=>!c.avoid).slice(0,5).map((co,idx)=>{
             const d=TOP5_DATA[co.name]||{};
             const fin5=COMPANY_FINANCIALS[co.name];
-            const defEndM=fin5&&fin5.ebitda27&&fin5.rev27?(()=>{const m=Math.round((fin5.ebitda27/fin5.rev27)*1000)/10;return m>=40?m:Math.min(m+10,40);})():Math.max(co.ebitda,Math.min(co.ebitda+10,40));
+            const defEndM=fin5&&fin5.ebitda25&&fin5.rev25?(()=>{const m=Math.round((fin5.ebitda25/fin5.rev25)*1000)/10;return m>=40?m:Math.min(m+10,40);})():Math.max(co.ebitda,Math.min(co.ebitda+10,40));
             const entryTEV=lboEntryTEV(co.sd,co.ntmRev,co.ntmRevX);
             const entryMult=Math.min(entryTEV/(co.ntmRev*co.ebitda/100),LBO_MAX_EXIT);
             const scenarioCfgs=d.scenarios||[
