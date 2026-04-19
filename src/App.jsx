@@ -53,7 +53,7 @@ function runDCF(companyName,cagrPct,g2027Rate,baseCAGR,ebitdaPct,endMarginPct,wa
     const ufcfForPV=ufcf*stubFactor;
     const pv=ufcfForPV/Math.pow(1+wD,yr-0.5);
     pvSum+=pv;
-    rows.push({yr,label,rev:Math.round(rev),revGrowth:Math.round(revGrowth*100)/100,
+    rows.push({yr,label,rev:Math.round(rev),revGrowth:Math.round(revGrowth*10)/10,
       ebitda:Math.round(ebitda),ebitdaMargin:Math.round(ebitdaMargin*10)/10,
       sbc:Math.round(sbc),sbcPctRev:Math.round(sbcPctRev*10)/10,
       ebitdaPostSBC:Math.round(ebitdaPostSBC),ebitdaPostSBCMargin:Math.round(ebitdaPostSBCMargin*10)/10,
